@@ -1,0 +1,754 @@
+local HUI_RANGE_DEFAULT = 100
+
+local function mcm_get(key)
+	if ui_mcm and ui_mcm.get then
+		return ui_mcm.get(key)
+	end
+	return nil
+end
+
+local function read_hui_setting_number(key, default)
+	if not (ini_file and type(ini_file) == "function") then
+		return default
+	end
+	local ini = ini_file("hui\\hui.ltx")
+	if not ini then
+		return default
+	end
+	if ini.section_exist and not ini:section_exist("settings") then
+		return default
+	end
+	if ini.line_exist and not ini:line_exist("settings", key) then
+		return default
+	end
+	if ini.r_float then
+		local v = ini:r_float("settings", key)
+		if v ~= nil then
+			return v
+		end
+	end
+	return default
+end
+
+local MARKER_W = 140
+local MARKER_H = 44
+local HEAD_Y_OFFSET_BIAS = mcm_get("hui/head_y_offset") or read_hui_setting_number("head_y_offset", 0)
+local FOV_FACTOR_MIN = mcm_get("hui/fov_factor_min") or read_hui_setting_number("fov_factor_min", 0.25)
+local FOV_FACTOR_MAX = mcm_get("hui/fov_factor_max") or read_hui_setting_number("fov_factor_max", 2.0)
+local FOV_COMP_WEIGHT = mcm_get("hui/fov_comp_weight") or read_hui_setting_number("fov_comp_weight", 1.0)
+local HP_BAR_W = mcm_get("hui/hp_bar_w") or read_hui_setting_number("hp_bar_w", 70)
+local HP_BAR_MIN_W = mcm_get("hui/hp_bar_min_w") or read_hui_setting_number("hp_bar_min_w", 40)
+local HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 100)
+
+local hui_range = mcm_get("hui/range") or HUI_RANGE_DEFAULT
+local hui_scale = 1
+local hui_ypos = 0
+local show_distance = false
+local show_name = mcm_get("hui/show_name") or false
+local show_mode = mcm_get("hui/show_mode") or 1
+local require_los = mcm_get("hui/require_los") or false
+local show_icon = false
+
+local crosshair_radius_px = read_hui_setting_number("crosshair_radius_px", 35)
+local hui_debug = (read_hui_setting_number("debug", 0) or 0) >= 1
+local hui_debug_last_ms = 0
+local hui_debug_raw_x = nil
+local hui_debug_raw_y = nil
+local hui_debug_mode = nil
+local hui_debug_sw = nil
+local hui_debug_sh = nil
+
+local target_storage = {}
+local target_dist
+local target_name
+local target_faction
+local target_community
+local fov_ref = nil
+
+local monster_clsid_to_name = {
+	[clsid.rat] 			= "rat",
+	[clsid.rat_s]			= "rat",
+	[clsid.bloodsucker_s] 	= "bloodsucker",
+	[clsid.boar_s] 			= "boar",
+	[clsid.burer_s] 		= "burer",
+	[clsid.chimera_s]		= "chimera",
+	[clsid.controller_s]	= "controller",
+	[clsid.dog_s]			= "dog",
+	[clsid.flesh_s]			= "flesh",
+	[clsid.gigant_s]		= "gigant",
+	[clsid.psy_dog_s]		= "psy_dog",
+	[clsid.psy_dog_phantom_s] = "psy_dog",
+	[clsid.pseudodog_s]		= "pseudodog",
+	[clsid.snork_s]			= "snork",
+	[clsid.tushkano_s]		= "tushkano",
+	[clsid.cat_s]			= "cat",
+	[clsid.fracture_s]		= "fracture",
+	[clsid.zombie_s]		= "zombie"
+}
+local monster_kind_to_name = {
+	["SM_KARLIK"]			= "karlik",
+	["SM_PSYSUCKER"]		= "psysucker",
+	["SM_LURKER"]			= "lurker",
+    ["SM_POLTER_G"]			= "poltergeist",
+	["SM_PYRO_G"]			= "pyrogeist",
+	["SM_PSEUDO_G"]			= "pseudogeist"
+}
+local function GetMutantName(obj)
+    local sec = type(obj.section) == "function" and obj:section() or obj:section_name()
+    local kind = SYS_GetParam(0, sec, "kind")
+    local cls = obj:clsid()
+    return monster_kind_to_name[kind] or monster_clsid_to_name[cls]
+end
+
+local function get_obj_screen_pos(obj)
+	local pos = utils_obj.safe_bone_pos(obj, "bip01_head") or obj:position()
+	local vec = pos and game.world2ui(vector():set(pos.x, pos.y, pos.z), false)
+	if (vec and (vec.x ~= -9999) and (vec.y ~= 0)) then
+		return vec
+	end
+	return nil
+end
+
+local function hui_dyn_scale_by_dist(dist)
+	return 1
+end
+
+local function hui_get_current_fov()
+	if device and type(device) == "function" then
+		local dev = device()
+		if dev and dev.fov ~= nil then
+			return dev.fov
+		end
+	end
+	if db and db.actor and db.actor.fov then
+		local ok, v = pcall(function()
+			return db.actor:fov()
+		end)
+		if ok and v ~= nil then
+			return v
+		end
+	end
+	return nil
+end
+
+local function hui_get_fov_factor()
+	local fov = hui_get_current_fov()
+	if not fov then
+		return 1
+	end
+	if fov_ref == nil then
+		fov_ref = fov
+	end
+	if fov > fov_ref then
+		fov_ref = fov
+	end
+	if fov_ref < 1 then
+		return 1
+	end
+	local k = fov / fov_ref
+	if k < FOV_FACTOR_MIN then
+		k = FOV_FACTOR_MIN
+	elseif k > FOV_FACTOR_MAX then
+		k = FOV_FACTOR_MAX
+	end
+
+	-- Apply weight: 0 = no compensation, 1 = full compensation, >1 = over-compensation
+	if FOV_COMP_WEIGHT ~= 1 then
+		k = 1.0 + (k - 1.0) * FOV_COMP_WEIGHT
+	end
+
+	return k
+end
+
+local function hui_head_y_offset_by_dist(dist)
+	local near_dist = 1
+	local far_dist = 100
+	local near_off = 0.2
+	local far_off = -1
+
+	if not dist or dist <= near_dist then
+		return near_off
+	end
+	if dist >= far_dist then
+		return far_off
+	end
+
+	local t = (dist - near_dist) / (far_dist - near_dist)
+	return near_off + ((far_off - near_off) * t)
+end
+
+local function hui_dyn_alpha_by_dist(dist)
+	local dist_near = read_hui_setting_number("dyn_dist_near", 2)
+	local dist_far = read_hui_setting_number("dyn_dist_far", 400)
+	local a_near = read_hui_setting_number("dyn_alpha_near", 255)
+	local a_far = read_hui_setting_number("dyn_alpha_far", 70)
+
+	dist_near = math.max(dist_near, 0.01)
+	dist_far = math.max(dist_far, dist_near + 0.01)
+
+	if not dist or dist <= dist_near then
+		return a_near
+	end
+	if dist >= dist_far then
+		return a_far
+	end
+
+	local t = (dist - dist_near) / (dist_far - dist_near)
+	if t < 0 then
+		t = 0
+	elseif t > 1 then
+		t = 1
+	end
+
+	return a_near + ((a_far - a_near) * t)
+end
+
+local function hui_get_text_font()
+	if GetFontLetterica16Russian then
+		return GetFontLetterica16Russian()
+	end
+	if GetFontMedium then
+		return GetFontMedium()
+	end
+	if GetFontSmall then
+		return GetFontSmall()
+	end
+	return nil
+end
+
+local function hui_get_sub_font()
+	return hui_get_text_font()
+end
+
+local function hui_apply_text_style(wnd, a, r, g, b, font)
+	if not wnd then
+		return
+	end
+	if font and wnd.SetFont then
+		wnd:SetFont(font)
+	end
+	if wnd.SetTextColor then
+		wnd:SetTextColor(GetARGB(a, r, g, b))
+	end
+end
+
+local function hui_apply_texture_alpha(wnd, a)
+	if wnd and wnd.SetTextureColor then
+		wnd:SetTextureColor(GetARGB(a, 255, 255, 255))
+	end
+end
+
+local function hui_apply_progress_style(wnd)
+	if not wnd then
+		return
+	end
+	if wnd.UseColor then
+		wnd:UseColor(false)
+	end
+	if wnd.ShowBackground then
+		wnd:ShowBackground(true)
+	end
+end
+
+local function hui_apply_layout(ele, s)
+	local w = MARKER_W
+	local h = MARKER_H
+	local root_sz = vector2():set(w, h)
+	ele.marker:SetWndSize(root_sz)
+	ele.marker_zoom:SetWndSize(root_sz)
+
+	ele.text2:SetWndPos(vector2():set(0, 0))
+	ele.text2_zoom:SetWndPos(vector2():set(0, 0))
+	ele.text2:SetWndSize(vector2():set(w, 16))
+	ele.text2_zoom:SetWndSize(vector2():set(w, 16))
+
+	ele.text3:SetWndPos(vector2():set(0, 14))
+	ele.text3_zoom:SetWndPos(vector2():set(0, 14))
+	ele.text3:SetWndSize(vector2():set(w, 14))
+	ele.text3_zoom:SetWndSize(vector2():set(w, 14))
+
+	ele.text1:SetWndPos(vector2():set(0, 34))
+	ele.text1_zoom:SetWndPos(vector2():set(0, 34))
+	ele.text1:SetWndSize(vector2():set(160, 16))
+	ele.text1_zoom:SetWndSize(vector2():set(160, 16))
+
+	local hp_w = HP_BAR_W * s
+	if hp_w < HP_BAR_MIN_W then
+		hp_w = HP_BAR_MIN_W
+	elseif hp_w > HP_BAR_MAX_W then
+		hp_w = HP_BAR_MAX_W
+	end
+	local hp_h = 5
+	local hp_x = (w - hp_w) * 0.5
+	local hp_y = 30
+	ele.hp:SetWndPos(vector2():set(hp_x, hp_y))
+	ele.hp_zoom:SetWndPos(vector2():set(hp_x, hp_y))
+	ele.hp:SetWndSize(vector2():set(hp_w, hp_h))
+	ele.hp_zoom:SetWndSize(vector2():set(hp_w, hp_h))
+end
+
+local function hui_apply_style(ele, s, dist)
+	local a = hui_dyn_alpha_by_dist(dist)
+
+	hui_apply_texture_alpha(ele.marker, a)
+	hui_apply_texture_alpha(ele.marker_zoom, a)
+	hui_apply_progress_style(ele.hp)
+	hui_apply_progress_style(ele.hp_zoom)
+
+	local name_font = hui_get_text_font()
+	local sub_font = hui_get_sub_font()
+	hui_apply_text_style(ele.text2, a, 220, 200, 150, name_font)
+	hui_apply_text_style(ele.text2_zoom, a, 220, 200, 150, name_font)
+	hui_apply_text_style(ele.text3, a, 180, 180, 180, sub_font)
+	hui_apply_text_style(ele.text3_zoom, a, 180, 180, 180, sub_font)
+end
+
+local function hui_world2ui_px(pos)
+	if not pos then
+		return nil
+	end
+	local vec = game.world2ui(vector():set(pos.x, pos.y, pos.z), false)
+	if not (vec and (vec.x ~= -9999) and (vec.y ~= 0)) then
+		return nil
+	end
+
+	local sw = 1024
+	local sh = 768
+	if device and type(device) == "function" then
+		local dev = device()
+		if dev and dev.width and dev.height then
+			sw = dev.width
+			sh = dev.height
+		end
+	end
+
+	local x = vec.x
+	local y = vec.y
+	hui_debug_raw_x = x
+	hui_debug_raw_y = y
+	hui_debug_mode = "raw"
+	hui_debug_sw = sw
+	hui_debug_sh = sh
+
+	if x >= 0 and x <= 1.5 and y >= 0 and y <= 1.5 then
+		hui_debug_mode = "01"
+		x = x * sw
+		y = y * sh
+	elseif x >= -1.5 and x <= 1.5 and y >= -1.5 and y <= 1.5 then
+		hui_debug_mode = "11"
+		x = (x + 1) * 0.5 * sw
+		y = (y + 1) * 0.5 * sh
+	elseif x > -sw and x < sw and y > -sh and y < sh and (x < 0 or y < 0) then
+		hui_debug_mode = "center"
+		x = x + (sw * 0.5)
+		y = y + (sh * 0.5)
+	else
+		hui_debug_mode = "px"
+	end
+
+	return vector2():set(x, y)
+end
+
+local function hui_is_target_allowed(npc)
+	if (npc:clsid() == clsid.crow) then
+		return nil
+	end
+
+	if not (IsStalker(npc) or IsMonster(npc)) then
+		return nil
+	end
+
+	if not npc:alive() then
+		return nil
+	end
+
+	if IsStalker(npc) and show_mode == 1 and npc:relation(db.actor) < game_object.enemy then
+		return nil
+	end
+
+	local dist = math.sqrt(npc:position():distance_to_sqr(db.actor:position()))
+	if dist > hui_range then
+		return nil
+	end
+
+	if require_los and not db.actor:see(npc) then
+		return nil
+	end
+
+	return dist
+end
+
+local function hui_set_target(npc)
+	local dist = hui_is_target_allowed(npc)
+	if not dist then
+		return false
+	end
+
+	target_dist = dist
+	target_faction = nil
+	target_community = nil
+	if IsMonster(npc) then
+		target_name = GetMutantName(npc) or "???"
+	elseif IsStalker(npc) then
+		target_name = npc:character_name()
+		target_community = character_community(npc)
+		target_faction = target_community and game.translate_string(target_community) or nil
+	else
+		target_name = "???"
+	end
+
+	return true
+end
+
+local function hui_pick_target()
+	return level.get_target_obj and level.get_target_obj() or nil
+
+	--[[ временно выключено: радиус вокруг прицела
+	if not (db and db.actor and db.actor:alive()) then
+		return nil
+	end
+	if not (level and (level.get_target_obj or level.iterate_nearest)) then
+		return nil
+	end
+
+	if not (device and type(device) == "function") then
+		return level.get_target_obj and level.get_target_obj() or nil
+	end
+
+	local dev = device()
+	if not (dev and dev.width and dev.height) then
+		return level.get_target_obj and level.get_target_obj() or nil
+	end
+
+	local center_x = dev.width * 0.5
+	local center_y = dev.height * 0.5
+	local radius = crosshair_radius_px or 0
+	if radius < 1 then
+		return level.get_target_obj and level.get_target_obj() or nil
+	end
+	local radius2 = radius * radius
+
+	if level.get_target_obj then
+		local direct = level.get_target_obj()
+		if direct then
+			local dist = hui_is_target_allowed(direct)
+			if dist then
+				local vec = get_obj_screen_pos(direct)
+				if vec then
+					local dx = vec.x - center_x
+					local dy = vec.y - center_y
+					local d2 = (dx * dx) + (dy * dy)
+					if d2 <= radius2 then
+						return direct
+					end
+				end
+			end
+		end
+	end
+
+	if not (level and level.iterate_nearest) then
+		return nil
+	end
+
+	local best_obj = nil
+	local best_screen_d2 = nil
+	local actor_pos = db.actor:position()
+
+	local ok = pcall(level.iterate_nearest, actor_pos, hui_range, function(obj)
+		if not obj then
+			return false
+		end
+
+		local dist = hui_is_target_allowed(obj)
+		if not dist then
+			return false
+		end
+
+		local vec = get_obj_screen_pos(obj)
+		if not vec then
+			return false
+		end
+
+		local dx = vec.x - center_x
+		local dy = vec.y - center_y
+		local d2 = (dx * dx) + (dy * dy)
+		if d2 <= radius2 and (best_screen_d2 == nil or d2 < best_screen_d2) then
+			best_screen_d2 = d2
+			best_obj = obj
+			if d2 <= 1 then
+				return true
+			end
+		end
+
+		return false
+	end)
+
+	if not ok then
+		return level.get_target_obj and level.get_target_obj() or nil
+	end
+
+	return best_obj
+	]]
+end
+
+function hui_actor_on_update()
+	for id,_ in pairs(target_storage) do
+		target_storage[id] = nil
+	end
+
+	local obj = hui_pick_target()
+	if obj and hui_set_target(obj) then
+		target_storage[obj:id()] = true
+	end
+
+	hui_ui_ensure()
+end
+
+local HUI_UI = nil
+
+function hui_ui_ensure()
+	if (HUI_UI == nil) then
+		HUI_UI = hui_ui()
+		get_hud():AddDialogToRender(HUI_UI)
+	end
+end
+
+local function hui_ui_remove()
+	if (HUI_UI ~= nil) then
+		get_hud():RemoveDialogToRender(HUI_UI)
+		HUI_UI = nil
+	end
+end
+
+local function hui_ui_update()
+	if (HUI_UI ~= nil) then
+		HUI_UI:Update(true)
+	end
+end
+
+class "hui_ui" (CUIScriptWnd)
+
+function hui_ui:__init() super()
+	self:InitControls()
+end
+
+function hui_ui:__finalize()
+end
+
+function hui_ui:InitControls()
+	self:SetAutoDelete(true)
+	self:SetWndRect(Frect():set(0,0,1024,768))
+	self.xml = CScriptXmlInit()
+	self.xml:ParseFile("ui_hui_marker.xml")
+	self.ele = {}
+
+end
+
+function hui_ui:Update()
+	local zoom_mode = axr_main.weapon_is_zoomed
+	CUIScriptWnd.Update(self)
+	for id,_ in pairs(target_storage) do
+		local st = db.storage[id]
+		if (st and st.object and hui_set_target(st.object)) then
+			if (self.ele[id] == nil) then
+				self.ele[id] = {}
+				self.ele[id].marker = self.xml:InitStatic("marker",self)
+				self.ele[id].marker_zoom = self.xml:InitStatic("marker_zoom",self)
+				self.ele[id].hp = self.xml:InitProgressBar("marker:hp", self.ele[id].marker)
+				self.ele[id].hp_zoom = self.xml:InitProgressBar("marker_zoom:hp", self.ele[id].marker_zoom)
+				self.ele[id].hp:ShowBackground(true)
+				self.ele[id].hp_zoom:ShowBackground(true)
+				self.ele[id].text1 = self.xml:InitTextWnd("marker:st_dist",self.ele[id].marker)
+				self.ele[id].text1_zoom = self.xml:InitTextWnd("marker_zoom:st_dist",self.ele[id].marker_zoom)
+				self.ele[id].text2 = self.xml:InitTextWnd("marker:npc_name",self.ele[id].marker)
+				self.ele[id].text2_zoom = self.xml:InitTextWnd("marker_zoom:npc_name",self.ele[id].marker_zoom)
+				self.ele[id].text3 = self.xml:InitTextWnd("marker:npc_faction",self.ele[id].marker)
+				self.ele[id].text3_zoom = self.xml:InitTextWnd("marker_zoom:npc_faction",self.ele[id].marker_zoom)
+			end
+			
+			local vec = self:GetScreenCoordinates(st.object, target_dist)
+
+			if (vec) then
+				local dyn_s = 1
+				hui_apply_layout(self.ele[id], dyn_s)
+				hui_apply_style(self.ele[id], dyn_s, target_dist)
+				local pos = vector2():set(vec.x - (MARKER_W * 0.5), vec.y - MARKER_H)
+				self.ele[id].marker:SetWndPos(pos)
+				self.ele[id].marker_zoom:SetWndPos(pos)
+				self.ele[id].hp:Show(true)
+				self.ele[id].hp_zoom:Show(true)
+				local hp = nil
+				if st.object.health ~= nil then
+					if type(st.object.health) == "function" then
+						hp = st.object:health()
+					elseif type(st.object.health) == "number" then
+						hp = st.object.health
+					end
+				end
+				if hp == nil then
+					hp = 1
+				end
+				if hp < 0 then
+					hp = 0
+				elseif hp > 1 then
+					hp = 1
+				end
+				local hp_pct = hp * 100
+				self.ele[id].hp:SetProgressPos(hp_pct)
+				self.ele[id].hp_zoom:SetProgressPos(hp_pct)
+
+				if show_distance then
+					self.ele[id].text1:Show(true)
+					self.ele[id].text1_zoom:Show(true)
+					local meters = math.floor(target_dist + 0.5)
+					self.ele[id].text1:SetText(string.format("%i m", meters))
+					self.ele[id].text1_zoom:SetText(string.format("%i m", meters))
+				else
+					self.ele[id].text1:SetText("")
+					self.ele[id].text1_zoom:SetText("")
+					self.ele[id].text1:Show(false)
+					self.ele[id].text1_zoom:Show(false)
+				end
+
+				if show_name then
+					self.ele[id].text2:Show(true)
+					self.ele[id].text2_zoom:Show(true)
+					self.ele[id].text3:Show(true)
+					self.ele[id].text3_zoom:Show(true)
+					local faction_text = target_faction or ""
+					if faction_text ~= "" then
+						faction_text = "[" .. faction_text .. "]"
+					end
+					self.ele[id].text2:SetText(target_name or "")
+					self.ele[id].text2_zoom:SetText(target_name or "")
+					self.ele[id].text3:SetText(faction_text)
+					self.ele[id].text3_zoom:SetText(faction_text)
+				else
+					self.ele[id].text2:SetText("")
+					self.ele[id].text2_zoom:SetText("")
+					self.ele[id].text2:Show(false)
+					self.ele[id].text2_zoom:Show(false)
+					self.ele[id].text3:SetText("")
+					self.ele[id].text3_zoom:SetText("")
+					self.ele[id].text3:Show(false)
+					self.ele[id].text3_zoom:Show(false)
+				end
+
+				if zoom_mode then
+					self.ele[id].marker_zoom:Show(true)			
+					self.ele[id].marker:Show(false)	
+				else	
+					self.ele[id].marker:Show(true)	
+					self.ele[id].marker_zoom:Show(false)	
+				end	
+			else
+				self.ele[id].text1:SetText("")
+				self.ele[id].text1_zoom:SetText("")
+				self.ele[id].text2:SetText("")
+				self.ele[id].text2_zoom:SetText("")
+				self.ele[id].text3:SetText("")
+				self.ele[id].text3_zoom:SetText("")
+				self.ele[id].text1:Show(false)
+				self.ele[id].text1_zoom:Show(false)
+				self.ele[id].text2:Show(false)
+				self.ele[id].text2_zoom:Show(false)
+				self.ele[id].text3:Show(false)
+				self.ele[id].text3_zoom:Show(false)
+				self.ele[id].hp:Show(false)
+				self.ele[id].hp_zoom:Show(false)
+				self.ele[id].marker:Show(false)
+				self.ele[id].marker_zoom:Show(false)
+			end
+		else
+			target_storage[id] = nil
+		end
+	end
+	
+	for id,_ in pairs(self.ele) do
+		if (target_storage[id] ~= true) then
+			self.ele[id].text1:SetText("")
+			self.ele[id].text1_zoom:SetText("")
+			self.ele[id].text2:SetText("")
+			self.ele[id].text2_zoom:SetText("")
+			self.ele[id].text3:SetText("")
+			self.ele[id].text3_zoom:SetText("")
+			self.ele[id].text1:Show(false)
+			self.ele[id].text1_zoom:Show(false)
+			self.ele[id].text2:Show(false)
+			self.ele[id].text2_zoom:Show(false)
+			self.ele[id].text3:Show(false)
+			self.ele[id].text3_zoom:Show(false)
+			self.ele[id].hp:Show(false)
+			self.ele[id].hp_zoom:Show(false)
+			self.ele[id].marker:Show(false)
+			self.ele[id].marker_zoom:Show(false)
+			self.ele[id] = nil
+		end
+	end
+end
+
+function hui_ui:GetScreenCoordinates(obj, dist)
+	local pos = utils_obj.safe_bone_pos(obj, "bip01_head") or obj:position()
+	if not pos then
+		return nil
+	end
+	
+	-- Base offset scaled by FOV (to keep it somewhat consistent on screen)
+	local base_off = hui_head_y_offset_by_dist(dist)
+	local fov_k = hui_get_fov_factor()
+	
+	-- Total offset: scaled base + direct bias
+	-- Applying bias separately makes it predictable for the user regardless of zoom
+	local off = (base_off * fov_k) + (HEAD_Y_OFFSET_BIAS or 0)
+	
+	if off ~= 0 then
+		pos = vector():set(pos.x, pos.y + off, pos.z)
+	end
+	return hui_world2ui_px(pos)
+end
+
+
+---------------------------------------------------------
+-- Callbacks
+---------------------------------------------------------
+local function on_option_change()
+	hui_ui_remove()
+	hui_range = mcm_get("hui/range") or HUI_RANGE_DEFAULT
+	hui_scale = 1
+	hui_ypos = 0
+	HEAD_Y_OFFSET_BIAS = mcm_get("hui/head_y_offset") or read_hui_setting_number("head_y_offset", 0)
+	FOV_FACTOR_MIN = mcm_get("hui/fov_factor_min") or read_hui_setting_number("fov_factor_min", 0.25)
+	FOV_FACTOR_MAX = mcm_get("hui/fov_factor_max") or read_hui_setting_number("fov_factor_max", 2.0)
+	FOV_COMP_WEIGHT = mcm_get("hui/fov_comp_weight") or read_hui_setting_number("fov_comp_weight", 1.0)
+	HP_BAR_W = mcm_get("hui/hp_bar_w") or read_hui_setting_number("hp_bar_w", 70)
+	HP_BAR_MIN_W = mcm_get("hui/hp_bar_min_w") or read_hui_setting_number("hp_bar_min_w", 40)
+	HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 100)
+	show_distance = false
+	show_name = mcm_get("hui/show_name") or false
+	show_mode = mcm_get("hui/show_mode") or 1
+	require_los = mcm_get("hui/require_los") or false
+	show_icon = false
+	hui_ui_ensure()
+end
+
+function actor_on_first_update()
+	hui_ui_ensure()
+end
+
+function actor_on_net_destroy()
+	hui_ui_remove()
+end
+
+function update_hud_on_show_hide()
+	hui_ui_update()
+end
+
+
+function on_game_start()
+	RegisterScriptCallback("actor_on_first_update",actor_on_first_update)
+	RegisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)
+	RegisterScriptCallback("GUI_on_show",update_hud_on_show_hide)
+	RegisterScriptCallback("GUI_on_hide",update_hud_on_show_hide)
+	RegisterScriptCallback("actor_on_update",hui_actor_on_update)
+	RegisterScriptCallback("on_option_change", on_option_change)
+end

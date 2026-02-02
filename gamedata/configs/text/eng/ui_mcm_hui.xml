@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="windows-1251"?>
+
+<string_table>
+	
+    <string id="ui_mcm_hui_title">
+		<text>H.U.I.</text>
+	</string>
+    <string id="ui_mcm_menu_hui">
+		<text>H.U.I.</text>
+	</string>
+    <string id="ui_mcm_hui_range">
+		<text>Max distance (m)</text>
+	</string>
+	<string id="ui_mcm_hui_range_desc">
+		<text>Range in meters for the marker to appear</text>
+	</string>
+	<string id="ui_mcm_hui_show_mode">
+		<text>Target filter</text>
+	</string>
+	<string id="ui_mcm_hui_show_mode_desc">
+		<text>Which targets can show the UI</text>
+	</string>
+	<string id="ui_mcm_hui_show_mode_enemy">
+		<text>Enemies only</text>
+	</string>
+	<string id="ui_mcm_hui_show_mode_any">
+		<text>Any target</text>
+	</string>
+	<string id="ui_mcm_hui_require_los">
+		<text>Require line of sight</text>
+	</string>
+	<string id="ui_mcm_hui_require_los_desc">
+		<text>Show UI only if actor can see the target</text>
+	</string>
+	<string id="ui_mcm_hui_show_icon">
+		<text>Show icon</text>
+	</string>
+	<string id="ui_mcm_hui_show_icon_desc">
+		<text>Show small icon near the target name</text>
+	</string>
+	<string id="ui_mcm_hui_dynamic_icon">
+		<text>Dynamic icon</text>
+	</string>
+	<string id="ui_mcm_hui_dynamic_icon_desc">
+		<text>Use target character_icon() as icon (more risky)</text>
+	</string>
+	<string id="ui_mcm_hui_show_distance">
+		<text>Show distance</text>
+	</string>		
+	<string id="ui_mcm_hui_show_distance_desc">
+		<text>Show distance on marker</text>
+	</string>	
+	<string id="ui_mcm_hui_show_name">
+		<text>Show name</text>
+	</string>		
+	<string id="ui_mcm_hui_show_name_desc">
+		<text>Show target name on marker</text>
+	</string>	
+	<string id="ui_mcm_hui_sscale">
+		<text>Marker scale</text>
+	</string>
+	<string id="ui_mcm_hui_y_pos">
+		<text>Marker Y offset (px)</text>
+	</string>	
+	<string id="ui_mcm_hui_head_y_offset">
+		<text>Head Y offset (bias, m)</text>
+	</string>
+	<string id="ui_mcm_hui_head_y_offset_desc">
+		<text>Manual marker offset up/down from the head (meters). Now works directly and is not suppressed by zoom.</text>
+	</string>
+	<string id="ui_mcm_hui_fov_comp_weight">
+		<text>Zoom compensation weight</text>
+	</string>
+	<string id="ui_mcm_hui_fov_comp_weight_desc">
+		<text>1.0 - full compensation, 0.0 - no compensation, >1.0 - hyper-compensation (marker will lower more aggressively during zoom).</text>
+	</string>
+	<string id="ui_mcm_hui_fov_factor_min">
+		<text>FOV min factor</text>
+	</string>
+	<string id="ui_mcm_hui_fov_factor_min_desc">
+		<text>Minimum FOV scaling factor (0.1-1.0)</text>
+	</string>
+	<string id="ui_mcm_hui_fov_factor_max">
+		<text>FOV max factor</text>
+	</string>
+	<string id="ui_mcm_hui_fov_factor_max_desc">
+		<text>Maximum FOV scaling factor (1.0-5.0)</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_w">
+		<text>HP bar width</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_min_w">
+		<text>HP bar min width</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_max_w">
+		<text>HP bar max width</text>
+	</string>
+</string_table>
