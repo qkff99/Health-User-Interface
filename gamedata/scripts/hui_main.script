@@ -30,24 +30,81 @@ local function read_hui_setting_number(key, default)
 	return default
 end
 
+local function read_hui_setting_bool(key, default)
+	if not (ini_file and type(ini_file) == "function") then
+		return default
+	end
+	local ini = ini_file("hui\\hui.ltx")
+	if not ini then
+		return default
+	end
+	if ini.section_exist and not ini:section_exist("settings") then
+		return default
+	end
+	if ini.line_exist and not ini:line_exist("settings", key) then
+		return default
+	end
+	if ini.r_bool then
+		local ok, v = pcall(function()
+			return ini:r_bool("settings", key)
+		end)
+		if ok and v ~= nil then
+			return v
+		end
+	end
+	if ini.r_string then
+		local ok, v = pcall(function()
+			return ini:r_string("settings", key)
+		end)
+		if ok and v ~= nil then
+			local s = tostring(v):lower()
+			if s == "1" or s == "true" or s == "yes" or s == "on" then
+				return true
+			end
+			if s == "0" or s == "false" or s == "no" or s == "off" then
+				return false
+			end
+		end
+	end
+	if ini.r_float then
+		local v = ini:r_float("settings", key)
+		if v ~= nil then
+			return v ~= 0
+		end
+	end
+	return default
+end
+
 local MARKER_W = 140
 local MARKER_H = 44
-local HEAD_Y_OFFSET_BIAS = mcm_get("hui/head_y_offset") or read_hui_setting_number("head_y_offset", 0)
-local FOV_FACTOR_MIN = mcm_get("hui/fov_factor_min") or read_hui_setting_number("fov_factor_min", 0.25)
-local FOV_FACTOR_MAX = mcm_get("hui/fov_factor_max") or read_hui_setting_number("fov_factor_max", 2.0)
-local FOV_COMP_WEIGHT = mcm_get("hui/fov_comp_weight") or read_hui_setting_number("fov_comp_weight", 1.0)
+local HEAD_Y_OFFSET_BIAS = mcm_get("hui/head_y_offset") or read_hui_setting_number("head_y_offset", 0.2)
+local FOV_FACTOR_MIN = mcm_get("hui/fov_factor_min") or read_hui_setting_number("fov_factor_min", 0.1)
+local FOV_FACTOR_MAX = mcm_get("hui/fov_factor_max") or read_hui_setting_number("fov_factor_max", 2)
+local FOV_COMP_WEIGHT = mcm_get("hui/fov_comp_weight") or read_hui_setting_number("fov_comp_weight", 1.3)
 local HP_BAR_W = mcm_get("hui/hp_bar_w") or read_hui_setting_number("hp_bar_w", 70)
-local HP_BAR_MIN_W = mcm_get("hui/hp_bar_min_w") or read_hui_setting_number("hp_bar_min_w", 40)
-local HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 100)
+local HP_BAR_MIN_W = mcm_get("hui/hp_bar_min_w") or read_hui_setting_number("hp_bar_min_w", 5)
+local HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 50)
 
-local hui_range = mcm_get("hui/range") or HUI_RANGE_DEFAULT
+local hui_range = mcm_get("hui/range") or read_hui_setting_number("range", 500)
 local hui_scale = 1
 local hui_ypos = 0
-local show_distance = false
-local show_name = mcm_get("hui/show_name") or false
-local show_mode = mcm_get("hui/show_mode") or 1
-local require_los = mcm_get("hui/require_los") or false
-local show_icon = false
+local show_distance = mcm_get("hui/show_distance")
+if show_distance == nil then
+	show_distance = read_hui_setting_bool("show_distance", true)
+end
+local show_name = mcm_get("hui/show_name")
+if show_name == nil then
+	show_name = read_hui_setting_bool("show_name", true)
+end
+local show_mode = mcm_get("hui/show_mode") or read_hui_setting_number("show_mode", 2)
+local require_los = mcm_get("hui/require_los")
+if require_los == nil then
+	require_los = read_hui_setting_bool("require_los", true)
+end
+local show_icon = mcm_get("hui/show_icon")
+if show_icon == nil then
+	show_icon = read_hui_setting_bool("show_icon", true)
+end
 
 local crosshair_radius_px = read_hui_setting_number("crosshair_radius_px", 35)
 local hui_debug = (read_hui_setting_number("debug", 0) or 0) >= 1
@@ -63,6 +120,7 @@ local target_dist
 local target_name
 local target_faction
 local target_community
+local target_relation
 local fov_ref = nil
 
 local monster_clsid_to_name = {
@@ -257,20 +315,38 @@ local function hui_apply_layout(ele, s)
 	ele.marker:SetWndSize(root_sz)
 	ele.marker_zoom:SetWndSize(root_sz)
 
+	ele.text1:SetWndPos(vector2():set(0, -16))
+	ele.text1_zoom:SetWndPos(vector2():set(0, -16))
+	ele.text1:SetWndSize(vector2():set(w, 16))
+	ele.text1_zoom:SetWndSize(vector2():set(w, 16))
+	if ele.text1_sh and ele.text1_sh_zoom then
+		ele.text1_sh:SetWndPos(vector2():set(1, -15))
+		ele.text1_sh_zoom:SetWndPos(vector2():set(1, -15))
+		ele.text1_sh:SetWndSize(vector2():set(w, 16))
+		ele.text1_sh_zoom:SetWndSize(vector2():set(w, 16))
+	end
+
 	ele.text2:SetWndPos(vector2():set(0, 0))
 	ele.text2_zoom:SetWndPos(vector2():set(0, 0))
 	ele.text2:SetWndSize(vector2():set(w, 16))
 	ele.text2_zoom:SetWndSize(vector2():set(w, 16))
+	if ele.text2_sh and ele.text2_sh_zoom then
+		ele.text2_sh:SetWndPos(vector2():set(1, 1))
+		ele.text2_sh_zoom:SetWndPos(vector2():set(1, 1))
+		ele.text2_sh:SetWndSize(vector2():set(w, 16))
+		ele.text2_sh_zoom:SetWndSize(vector2():set(w, 16))
+	end
 
 	ele.text3:SetWndPos(vector2():set(0, 14))
 	ele.text3_zoom:SetWndPos(vector2():set(0, 14))
 	ele.text3:SetWndSize(vector2():set(w, 14))
 	ele.text3_zoom:SetWndSize(vector2():set(w, 14))
-
-	ele.text1:SetWndPos(vector2():set(0, 34))
-	ele.text1_zoom:SetWndPos(vector2():set(0, 34))
-	ele.text1:SetWndSize(vector2():set(160, 16))
-	ele.text1_zoom:SetWndSize(vector2():set(160, 16))
+	if ele.text3_sh and ele.text3_sh_zoom then
+		ele.text3_sh:SetWndPos(vector2():set(1, 15))
+		ele.text3_sh_zoom:SetWndPos(vector2():set(1, 15))
+		ele.text3_sh:SetWndSize(vector2():set(w, 14))
+		ele.text3_sh_zoom:SetWndSize(vector2():set(w, 14))
+	end
 
 	local hp_w = HP_BAR_W * s
 	if hp_w < HP_BAR_MIN_W then
@@ -281,26 +357,132 @@ local function hui_apply_layout(ele, s)
 	local hp_h = 5
 	local hp_x = (w - hp_w) * 0.5
 	local hp_y = 30
+	ele.hp_w = hp_w
+	ele.hp_h = hp_h
 	ele.hp:SetWndPos(vector2():set(hp_x, hp_y))
 	ele.hp_zoom:SetWndPos(vector2():set(hp_x, hp_y))
+	ele.hp_bg:SetWndPos(vector2():set(hp_x, hp_y))
+	ele.hp_bg_zoom:SetWndPos(vector2():set(hp_x, hp_y))
+	if ele.hp_shadow and ele.hp_shadow_zoom then
+		ele.hp_shadow:SetWndPos(vector2():set(hp_x + 1, hp_y + 1))
+		ele.hp_shadow_zoom:SetWndPos(vector2():set(hp_x + 1, hp_y + 1))
+		ele.hp_shadow:SetWndSize(vector2():set(hp_w, hp_h))
+		ele.hp_shadow_zoom:SetWndSize(vector2():set(hp_w, hp_h))
+	end
 	ele.hp:SetWndSize(vector2():set(hp_w, hp_h))
 	ele.hp_zoom:SetWndSize(vector2():set(hp_w, hp_h))
 end
 
-local function hui_apply_style(ele, s, dist)
+local function hui_get_name_rgb_by_relation(rel)
+	if game_object and rel ~= nil then
+		if game_object.enemy ~= nil and rel == game_object.enemy then
+			return 255, 80, 80
+		end
+		if game_object.friend ~= nil and rel == game_object.friend then
+			return 80, 255, 80
+		end
+	end
+	return 220, 200, 150
+end
+
+local function hui_get_faction_rgb_by_community(comm)
+	if not comm then
+		return 180, 180, 180
+	end
+	if comm == "stalker" then
+		return 255, 255, 0
+	end
+	if comm == "csky" then
+		return 0, 200, 255
+	end
+	if comm == "dolg" then
+		return 255, 100, 100
+	end
+	if comm == "freedom" then
+		return 135, 240, 110
+	end
+	if comm == "killer" then
+		return 50, 100, 200
+	end
+	if comm == "army" then
+		return 90, 120, 60
+	end
+	if comm == "ecolog" then
+		return 230, 140, 10
+	end
+	if comm == "monolith" then
+		return 150, 40, 200
+	end
+	if comm == "renegade" or comm == "renegades" then
+		return 150, 30, 30
+	end
+	if comm == "greh" or comm == "sin" then
+		return 200, 30, 0
+	end
+	if comm == "isg" or comm == "unisg" then
+		return 0, 135, 60
+	end
+	if comm == "zombied" or comm == "zombies" then
+		return 0, 0, 0
+	end
+	if comm == "trader" then
+		return 255, 255, 255
+	end
+	return 180, 180, 180
+end
+
+local function hui_apply_style(ele, s, dist, rel, comm)
 	local a = hui_dyn_alpha_by_dist(dist)
 
 	hui_apply_texture_alpha(ele.marker, a)
 	hui_apply_texture_alpha(ele.marker_zoom, a)
-	hui_apply_progress_style(ele.hp)
-	hui_apply_progress_style(ele.hp_zoom)
+	if ele.hp_bg and ele.hp_bg_zoom then
+		hui_apply_texture_alpha(ele.hp_bg, a)
+		hui_apply_texture_alpha(ele.hp_bg_zoom, a)
+		if ele.hp_bg.SetTextureColor then
+			ele.hp_bg:SetTextureColor(GetARGB(a, 25, 25, 25))
+		end
+		if ele.hp_bg_zoom.SetTextureColor then
+			ele.hp_bg_zoom:SetTextureColor(GetARGB(a, 25, 25, 25))
+		end
+	end
+	if ele.hp_shadow and ele.hp_shadow_zoom then
+		hui_apply_texture_alpha(ele.hp_shadow, a)
+		hui_apply_texture_alpha(ele.hp_shadow_zoom, a)
+		if ele.hp_shadow.SetTextureColor then
+			ele.hp_shadow:SetTextureColor(GetARGB(a, 0, 0, 0))
+		end
+		if ele.hp_shadow_zoom.SetTextureColor then
+			ele.hp_shadow_zoom:SetTextureColor(GetARGB(a, 0, 0, 0))
+		end
+	end
+	hui_apply_texture_alpha(ele.hp, a)
+	hui_apply_texture_alpha(ele.hp_zoom, a)
 
 	local name_font = hui_get_text_font()
 	local sub_font = hui_get_sub_font()
-	hui_apply_text_style(ele.text2, a, 220, 200, 150, name_font)
-	hui_apply_text_style(ele.text2_zoom, a, 220, 200, 150, name_font)
-	hui_apply_text_style(ele.text3, a, 180, 180, 180, sub_font)
-	hui_apply_text_style(ele.text3_zoom, a, 180, 180, 180, sub_font)
+	local nr, ng, nb = hui_get_name_rgb_by_relation(rel)
+	local fr, fg, fb = hui_get_faction_rgb_by_community(comm)
+	if ele.text1_sh and ele.text1_sh_zoom then
+		hui_apply_text_style(ele.text1_sh, a, 0, 0, 0, name_font)
+		hui_apply_text_style(ele.text1_sh_zoom, a, 0, 0, 0, name_font)
+	end
+	if ele.text2_sh and ele.text2_sh_zoom then
+		hui_apply_text_style(ele.text2_sh, a, 0, 0, 0, name_font)
+		hui_apply_text_style(ele.text2_sh_zoom, a, 0, 0, 0, name_font)
+	end
+	if ele.text3_sh and ele.text3_sh_zoom then
+		hui_apply_text_style(ele.text3_sh, a, 0, 0, 0, sub_font)
+		hui_apply_text_style(ele.text3_sh_zoom, a, 0, 0, 0, sub_font)
+	end
+	if ele.text1 and ele.text1_zoom then
+		hui_apply_text_style(ele.text1, a, 255, 127, 0, name_font)
+		hui_apply_text_style(ele.text1_zoom, a, 255, 127, 0, name_font)
+	end
+	hui_apply_text_style(ele.text2, a, nr, ng, nb, name_font)
+	hui_apply_text_style(ele.text2_zoom, a, nr, ng, nb, name_font)
+	hui_apply_text_style(ele.text3, a, fr, fg, fb, sub_font)
+	hui_apply_text_style(ele.text3_zoom, a, fr, fg, fb, sub_font)
 end
 
 local function hui_world2ui_px(pos)
@@ -387,12 +569,22 @@ local function hui_set_target(npc)
 	target_dist = dist
 	target_faction = nil
 	target_community = nil
+	target_relation = nil
 	if IsMonster(npc) then
 		target_name = GetMutantName(npc) or "???"
+		target_relation = game_object and game_object.enemy or nil
 	elseif IsStalker(npc) then
 		target_name = npc:character_name()
 		target_community = character_community(npc)
 		target_faction = target_community and game.translate_string(target_community) or nil
+		if npc.relation and db and db.actor then
+			local ok, rel = pcall(function()
+				return npc:relation(db.actor)
+			end)
+			if ok then
+				target_relation = rel
+			end
+		end
 	else
 		target_name = "???"
 	end
@@ -554,14 +746,22 @@ function hui_ui:Update()
 				self.ele[id] = {}
 				self.ele[id].marker = self.xml:InitStatic("marker",self)
 				self.ele[id].marker_zoom = self.xml:InitStatic("marker_zoom",self)
-				self.ele[id].hp = self.xml:InitProgressBar("marker:hp", self.ele[id].marker)
-				self.ele[id].hp_zoom = self.xml:InitProgressBar("marker_zoom:hp", self.ele[id].marker_zoom)
-				self.ele[id].hp:ShowBackground(true)
-				self.ele[id].hp_zoom:ShowBackground(true)
+				self.ele[id].hp_shadow = self.xml:InitStatic("marker:hp_shadow", self.ele[id].marker)
+				self.ele[id].hp_shadow_zoom = self.xml:InitStatic("marker_zoom:hp_shadow", self.ele[id].marker_zoom)
+				self.ele[id].hp_bg = self.xml:InitStatic("marker:hp_bg", self.ele[id].marker)
+				self.ele[id].hp_bg_zoom = self.xml:InitStatic("marker_zoom:hp_bg", self.ele[id].marker_zoom)
+				self.ele[id].hp = self.xml:InitStatic("marker:hp", self.ele[id].marker)
+				self.ele[id].hp_zoom = self.xml:InitStatic("marker_zoom:hp", self.ele[id].marker_zoom)
+				self.ele[id].text1_sh = self.xml:InitTextWnd("marker:st_dist_sh",self.ele[id].marker)
+				self.ele[id].text1_sh_zoom = self.xml:InitTextWnd("marker_zoom:st_dist_sh",self.ele[id].marker_zoom)
 				self.ele[id].text1 = self.xml:InitTextWnd("marker:st_dist",self.ele[id].marker)
 				self.ele[id].text1_zoom = self.xml:InitTextWnd("marker_zoom:st_dist",self.ele[id].marker_zoom)
+				self.ele[id].text2_sh = self.xml:InitTextWnd("marker:npc_name_sh",self.ele[id].marker)
+				self.ele[id].text2_sh_zoom = self.xml:InitTextWnd("marker_zoom:npc_name_sh",self.ele[id].marker_zoom)
 				self.ele[id].text2 = self.xml:InitTextWnd("marker:npc_name",self.ele[id].marker)
 				self.ele[id].text2_zoom = self.xml:InitTextWnd("marker_zoom:npc_name",self.ele[id].marker_zoom)
+				self.ele[id].text3_sh = self.xml:InitTextWnd("marker:npc_faction_sh",self.ele[id].marker)
+				self.ele[id].text3_sh_zoom = self.xml:InitTextWnd("marker_zoom:npc_faction_sh",self.ele[id].marker_zoom)
 				self.ele[id].text3 = self.xml:InitTextWnd("marker:npc_faction",self.ele[id].marker)
 				self.ele[id].text3_zoom = self.xml:InitTextWnd("marker_zoom:npc_faction",self.ele[id].marker_zoom)
 			end
@@ -571,12 +771,22 @@ function hui_ui:Update()
 			if (vec) then
 				local dyn_s = 1
 				hui_apply_layout(self.ele[id], dyn_s)
-				hui_apply_style(self.ele[id], dyn_s, target_dist)
+				hui_apply_style(self.ele[id], dyn_s, target_dist, target_relation, target_community)
 				local pos = vector2():set(vec.x - (MARKER_W * 0.5), vec.y - MARKER_H)
 				self.ele[id].marker:SetWndPos(pos)
 				self.ele[id].marker_zoom:SetWndPos(pos)
+				self.ele[id].hp_shadow:Show(true)
+				self.ele[id].hp_shadow_zoom:Show(true)
+				self.ele[id].hp_bg:Show(true)
+				self.ele[id].hp_bg_zoom:Show(true)
 				self.ele[id].hp:Show(true)
 				self.ele[id].hp_zoom:Show(true)
+				if self.ele[id].hp_shadow.SetTextureColor then
+					self.ele[id].hp_shadow:SetTextureColor(GetARGB(160, 0, 0, 0))
+				end
+				if self.ele[id].hp_shadow_zoom.SetTextureColor then
+					self.ele[id].hp_shadow_zoom:SetTextureColor(GetARGB(160, 0, 0, 0))
+				end
 				local hp = nil
 				if st.object.health ~= nil then
 					if type(st.object.health) == "function" then
@@ -593,43 +803,73 @@ function hui_ui:Update()
 				elseif hp > 1 then
 					hp = 1
 				end
-				local hp_pct = hp * 100
-				self.ele[id].hp:SetProgressPos(hp_pct)
-				self.ele[id].hp_zoom:SetProgressPos(hp_pct)
+				local hp_w = self.ele[id].hp_w or HP_BAR_W
+				local hp_h = self.ele[id].hp_h or 5
+				local fill_w = math.floor((hp_w * hp) + 0.5)
+				self.ele[id].hp_shadow:SetWndSize(vector2():set(hp_w, hp_h))
+				self.ele[id].hp_shadow_zoom:SetWndSize(vector2():set(hp_w, hp_h))
+				self.ele[id].hp_bg:SetWndSize(vector2():set(hp_w, hp_h))
+				self.ele[id].hp_bg_zoom:SetWndSize(vector2():set(hp_w, hp_h))
+				self.ele[id].hp:SetWndSize(vector2():set(fill_w, hp_h))
+				self.ele[id].hp_zoom:SetWndSize(vector2():set(fill_w, hp_h))
 
 				if show_distance then
+					self.ele[id].text1_sh:Show(true)
+					self.ele[id].text1_sh_zoom:Show(true)
 					self.ele[id].text1:Show(true)
 					self.ele[id].text1_zoom:Show(true)
 					local meters = math.floor(target_dist + 0.5)
+					self.ele[id].text1_sh:SetText(string.format("%i m", meters))
+					self.ele[id].text1_sh_zoom:SetText(string.format("%i m", meters))
 					self.ele[id].text1:SetText(string.format("%i m", meters))
 					self.ele[id].text1_zoom:SetText(string.format("%i m", meters))
 				else
+					self.ele[id].text1_sh:SetText("")
+					self.ele[id].text1_sh_zoom:SetText("")
 					self.ele[id].text1:SetText("")
 					self.ele[id].text1_zoom:SetText("")
+					self.ele[id].text1_sh:Show(false)
+					self.ele[id].text1_sh_zoom:Show(false)
 					self.ele[id].text1:Show(false)
 					self.ele[id].text1_zoom:Show(false)
 				end
 
 				if show_name then
+					self.ele[id].text2_sh:Show(true)
+					self.ele[id].text2_sh_zoom:Show(true)
 					self.ele[id].text2:Show(true)
 					self.ele[id].text2_zoom:Show(true)
+					self.ele[id].text3_sh:Show(true)
+					self.ele[id].text3_sh_zoom:Show(true)
 					self.ele[id].text3:Show(true)
 					self.ele[id].text3_zoom:Show(true)
 					local faction_text = target_faction or ""
 					if faction_text ~= "" then
 						faction_text = "[" .. faction_text .. "]"
 					end
+					self.ele[id].text2_sh:SetText(target_name or "")
+					self.ele[id].text2_sh_zoom:SetText(target_name or "")
 					self.ele[id].text2:SetText(target_name or "")
 					self.ele[id].text2_zoom:SetText(target_name or "")
+					self.ele[id].text3_sh:SetText(faction_text)
+					self.ele[id].text3_sh_zoom:SetText(faction_text)
 					self.ele[id].text3:SetText(faction_text)
 					self.ele[id].text3_zoom:SetText(faction_text)
 				else
+					self.ele[id].text2_sh:SetText("")
+					self.ele[id].text2_sh_zoom:SetText("")
 					self.ele[id].text2:SetText("")
 					self.ele[id].text2_zoom:SetText("")
+					self.ele[id].text2_sh:Show(false)
+					self.ele[id].text2_sh_zoom:Show(false)
 					self.ele[id].text2:Show(false)
 					self.ele[id].text2_zoom:Show(false)
+					self.ele[id].text3_sh:SetText("")
+					self.ele[id].text3_sh_zoom:SetText("")
 					self.ele[id].text3:SetText("")
 					self.ele[id].text3_zoom:SetText("")
+					self.ele[id].text3_sh:Show(false)
+					self.ele[id].text3_sh_zoom:Show(false)
 					self.ele[id].text3:Show(false)
 					self.ele[id].text3_zoom:Show(false)
 				end
@@ -648,14 +888,30 @@ function hui_ui:Update()
 				self.ele[id].text2_zoom:SetText("")
 				self.ele[id].text3:SetText("")
 				self.ele[id].text3_zoom:SetText("")
+				self.ele[id].text1_sh:SetText("")
+				self.ele[id].text1_sh_zoom:SetText("")
+				self.ele[id].text2_sh:SetText("")
+				self.ele[id].text2_sh_zoom:SetText("")
+				self.ele[id].text3_sh:SetText("")
+				self.ele[id].text3_sh_zoom:SetText("")
 				self.ele[id].text1:Show(false)
 				self.ele[id].text1_zoom:Show(false)
 				self.ele[id].text2:Show(false)
 				self.ele[id].text2_zoom:Show(false)
 				self.ele[id].text3:Show(false)
 				self.ele[id].text3_zoom:Show(false)
+				self.ele[id].text1_sh:Show(false)
+				self.ele[id].text1_sh_zoom:Show(false)
+				self.ele[id].text2_sh:Show(false)
+				self.ele[id].text2_sh_zoom:Show(false)
+				self.ele[id].text3_sh:Show(false)
+				self.ele[id].text3_sh_zoom:Show(false)
 				self.ele[id].hp:Show(false)
 				self.ele[id].hp_zoom:Show(false)
+				self.ele[id].hp_bg:Show(false)
+				self.ele[id].hp_bg_zoom:Show(false)
+				self.ele[id].hp_shadow:Show(false)
+				self.ele[id].hp_shadow_zoom:Show(false)
 				self.ele[id].marker:Show(false)
 				self.ele[id].marker_zoom:Show(false)
 			end
@@ -672,14 +928,30 @@ function hui_ui:Update()
 			self.ele[id].text2_zoom:SetText("")
 			self.ele[id].text3:SetText("")
 			self.ele[id].text3_zoom:SetText("")
+			self.ele[id].text1_sh:SetText("")
+			self.ele[id].text1_sh_zoom:SetText("")
+			self.ele[id].text2_sh:SetText("")
+			self.ele[id].text2_sh_zoom:SetText("")
+			self.ele[id].text3_sh:SetText("")
+			self.ele[id].text3_sh_zoom:SetText("")
 			self.ele[id].text1:Show(false)
 			self.ele[id].text1_zoom:Show(false)
 			self.ele[id].text2:Show(false)
 			self.ele[id].text2_zoom:Show(false)
 			self.ele[id].text3:Show(false)
 			self.ele[id].text3_zoom:Show(false)
+			self.ele[id].text1_sh:Show(false)
+			self.ele[id].text1_sh_zoom:Show(false)
+			self.ele[id].text2_sh:Show(false)
+			self.ele[id].text2_sh_zoom:Show(false)
+			self.ele[id].text3_sh:Show(false)
+			self.ele[id].text3_sh_zoom:Show(false)
 			self.ele[id].hp:Show(false)
 			self.ele[id].hp_zoom:Show(false)
+			self.ele[id].hp_bg:Show(false)
+			self.ele[id].hp_bg_zoom:Show(false)
+			self.ele[id].hp_shadow:Show(false)
+			self.ele[id].hp_shadow_zoom:Show(false)
 			self.ele[id].marker:Show(false)
 			self.ele[id].marker_zoom:Show(false)
 			self.ele[id] = nil
@@ -713,21 +985,33 @@ end
 ---------------------------------------------------------
 local function on_option_change()
 	hui_ui_remove()
-	hui_range = mcm_get("hui/range") or HUI_RANGE_DEFAULT
+	hui_range = mcm_get("hui/range") or read_hui_setting_number("range", 500)
 	hui_scale = 1
 	hui_ypos = 0
-	HEAD_Y_OFFSET_BIAS = mcm_get("hui/head_y_offset") or read_hui_setting_number("head_y_offset", 0)
-	FOV_FACTOR_MIN = mcm_get("hui/fov_factor_min") or read_hui_setting_number("fov_factor_min", 0.25)
-	FOV_FACTOR_MAX = mcm_get("hui/fov_factor_max") or read_hui_setting_number("fov_factor_max", 2.0)
-	FOV_COMP_WEIGHT = mcm_get("hui/fov_comp_weight") or read_hui_setting_number("fov_comp_weight", 1.0)
+	HEAD_Y_OFFSET_BIAS = mcm_get("hui/head_y_offset") or read_hui_setting_number("head_y_offset", 0.2)
+	FOV_FACTOR_MIN = mcm_get("hui/fov_factor_min") or read_hui_setting_number("fov_factor_min", 0.1)
+	FOV_FACTOR_MAX = mcm_get("hui/fov_factor_max") or read_hui_setting_number("fov_factor_max", 2)
+	FOV_COMP_WEIGHT = mcm_get("hui/fov_comp_weight") or read_hui_setting_number("fov_comp_weight", 1.3)
 	HP_BAR_W = mcm_get("hui/hp_bar_w") or read_hui_setting_number("hp_bar_w", 70)
-	HP_BAR_MIN_W = mcm_get("hui/hp_bar_min_w") or read_hui_setting_number("hp_bar_min_w", 40)
-	HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 100)
-	show_distance = false
-	show_name = mcm_get("hui/show_name") or false
-	show_mode = mcm_get("hui/show_mode") or 1
-	require_los = mcm_get("hui/require_los") or false
-	show_icon = false
+	HP_BAR_MIN_W = mcm_get("hui/hp_bar_min_w") or read_hui_setting_number("hp_bar_min_w", 5)
+	HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 50)
+	show_distance = mcm_get("hui/show_distance")
+	if show_distance == nil then
+		show_distance = read_hui_setting_bool("show_distance", true)
+	end
+	show_name = mcm_get("hui/show_name")
+	if show_name == nil then
+		show_name = read_hui_setting_bool("show_name", true)
+	end
+	show_mode = mcm_get("hui/show_mode") or read_hui_setting_number("show_mode", 2)
+	require_los = mcm_get("hui/require_los")
+	if require_los == nil then
+		require_los = read_hui_setting_bool("require_los", true)
+	end
+	show_icon = mcm_get("hui/show_icon")
+	if show_icon == nil then
+		show_icon = read_hui_setting_bool("show_icon", true)
+	end
 	hui_ui_ensure()
 end
 
