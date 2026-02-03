@@ -1599,6 +1599,15 @@ function hui_ui:Update(delta)
 					local hp_w = self.ele[id].hp_w or HP_BAR_W
 					local hp_h = self.ele[id].hp_h or 5
 					local fill_w = math.floor((hp_w * hp) + 0.5)
+					local w = MARKER_W
+					local hp_x = (w - hp_w) * 0.5 + (HP_BAR_OFFSET_X * dyn_s)
+					local hp_y = 30 + (HP_BAR_OFFSET_Y * dyn_s)
+					self.ele[id].hp:SetWndPos(vector2():set(hp_x, hp_y))
+					self.ele[id].hp_zoom:SetWndPos(vector2():set(hp_x, hp_y))
+					self.ele[id].hp_bg:SetWndPos(vector2():set(hp_x, hp_y))
+					self.ele[id].hp_bg_zoom:SetWndPos(vector2():set(hp_x, hp_y))
+					self.ele[id].hp_shadow:SetWndPos(vector2():set(hp_x + 1, hp_y + 1))
+					self.ele[id].hp_shadow_zoom:SetWndPos(vector2():set(hp_x + 1, hp_y + 1))
 					self.ele[id].hp_shadow:SetWndSize(vector2():set(hp_w, hp_h))
 					self.ele[id].hp_shadow_zoom:SetWndSize(vector2():set(hp_w, hp_h))
 					self.ele[id].hp_bg:SetWndSize(vector2():set(hp_w, hp_h))
