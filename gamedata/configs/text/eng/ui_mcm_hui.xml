@@ -62,6 +62,24 @@
 	<string id="ui_mcm_hui_update_ms_desc">
 		<text>How often the marker updates. 0 = every frame</text>
 	</string>
+	<string id="ui_mcm_hui_use_crosshair_radius">
+		<text>Crosshair radius mode</text>
+	</string>
+	<string id="ui_mcm_hui_use_crosshair_radius_desc">
+		<text>When enabled, show targets inside a radius around the crosshair</text>
+	</string>
+	<string id="ui_mcm_hui_crosshair_radius_px">
+		<text>Crosshair radius (px)</text>
+	</string>
+	<string id="ui_mcm_hui_crosshair_radius_px_desc">
+		<text>Radius in pixels around the screen center</text>
+	</string>
+	<string id="ui_mcm_hui_crosshair_only_best">
+		<text>Only nearest to crosshair</text>
+	</string>
+	<string id="ui_mcm_hui_crosshair_only_best_desc">
+		<text>If enabled, show only one target closest to the crosshair center</text>
+	</string>
 	<string id="ui_mcm_hui_jitter_off">
 		<text>Anti-jitter: Off</text>
 	</string>

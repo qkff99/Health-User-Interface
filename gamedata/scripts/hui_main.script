@@ -105,6 +105,15 @@ local show_icon = mcm_get("hui/show_icon")
 if show_icon == nil then
 	show_icon = read_hui_setting_bool("show_icon", true)
 end
+local use_crosshair_radius = mcm_get("hui/use_crosshair_radius")
+if use_crosshair_radius == nil then
+	use_crosshair_radius = read_hui_setting_bool("use_crosshair_radius", false)
+end
+local crosshair_radius_px = mcm_get("hui/crosshair_radius_px") or read_hui_setting_number("crosshair_radius_px", 35)
+local crosshair_only_best = mcm_get("hui/crosshair_only_best")
+if crosshair_only_best == nil then
+	crosshair_only_best = read_hui_setting_bool("crosshair_only_best", true)
+end
 
 local function hui_normalize_update_ms(v)
 	v = tonumber(v) or 17
@@ -236,6 +245,43 @@ local function hui_get_device_obj()
 	return device
 end
 
+local hui_check_object_seen_non_nil = false
+local function hui_level_check_object(obj)
+	if not (level and level.check_object) then
+		return nil
+	end
+	local ok, v = pcall(function()
+		return level.check_object(obj)
+	end)
+	if not ok then
+		return nil
+	end
+	if v == nil then
+		if hui_check_object_seen_non_nil then
+			return false
+		end
+		return nil
+	end
+	hui_check_object_seen_non_nil = true
+	if type(v) == "boolean" then
+		return v
+	end
+	if type(v) == "number" then
+		return v ~= 0
+	end
+	if type(v) == "string" then
+		local s = tostring(v):lower()
+		if s == "1" or s == "true" or s == "yes" or s == "on" then
+			return true
+		end
+		if s == "0" or s == "false" or s == "no" or s == "off" then
+			return false
+		end
+		return nil
+	end
+	return nil
+end
+
 local function hui_get_dt_ms(delta)
 	local d = tonumber(delta)
 	if d and d > 0 then
@@ -294,9 +340,7 @@ local function hui_should_tick(accum_ms, last_ms, delta, update_ms)
 	return true, accum_ms, now or last_ms
 end
 
-local crosshair_radius_px = read_hui_setting_number("crosshair_radius_px", 35)
 local hui_debug = (read_hui_setting_number("debug", 0) or 0) >= 1
-local hui_debug_last_ms = 0
 local hui_debug_raw_x = nil
 local hui_debug_raw_y = nil
 local hui_debug_mode = nil
@@ -783,92 +827,130 @@ end
 local function hui_pick_target()
 	return level.get_target_obj and level.get_target_obj() or nil
 
-	--[[ временно выключено: радиус вокруг прицела
+end
+
+local function hui_pick_targets_in_crosshair()
+	local out = {}
 	if not (db and db.actor and db.actor:alive()) then
-		return nil
+		return out
 	end
 	if not (level and (level.get_target_obj or level.iterate_nearest)) then
-		return nil
+		return out
 	end
 
-	if not (device and type(device) == "function") then
-		return level.get_target_obj and level.get_target_obj() or nil
-	end
-
-	local dev = device()
-	if not (dev and dev.width and dev.height) then
-		return level.get_target_obj and level.get_target_obj() or nil
-	end
-
-	local center_x = dev.width * 0.5
-	local center_y = dev.height * 0.5
-	local radius = crosshair_radius_px or 0
-	if radius < 1 then
-		return level.get_target_obj and level.get_target_obj() or nil
-	end
-	local radius2 = radius * radius
-
-	if level.get_target_obj then
-		local direct = level.get_target_obj()
-		if direct then
-			local dist = hui_is_target_allowed(direct)
-			if dist then
-				local vec = get_obj_screen_pos(direct)
-				if vec then
-					local dx = vec.x - center_x
-					local dy = vec.y - center_y
-					local d2 = (dx * dx) + (dy * dy)
-					if d2 <= radius2 then
-						return direct
-					end
-				end
+	local block_dist = nil
+	if require_los and level and level.get_target_dist then
+		local ok, v = pcall(function()
+			return level.get_target_dist()
+		end)
+		if ok and v ~= nil then
+			local n = tonumber(v)
+			if n and n > 0 then
+				block_dist = n
 			end
 		end
 	end
 
-	if not (level and level.iterate_nearest) then
-		return nil
+	local radius = tonumber(crosshair_radius_px) or 0
+	if radius < 1 then
+		local direct = level.get_target_obj and level.get_target_obj() or nil
+		if direct and hui_is_target_allowed(direct) then
+			local ok, id = pcall(function()
+				return direct:id()
+			end)
+			if ok and id then
+				out[id] = true
+			end
+		end
+		return out
 	end
 
-	local best_obj = nil
-	local best_screen_d2 = nil
-	local actor_pos = db.actor:position()
+	local center_x = 512
+	local center_y = 384
+	local radius2 = radius * radius
 
-	local ok = pcall(level.iterate_nearest, actor_pos, hui_range, function(obj)
-		if not obj then
-			return false
+	local best_id = nil
+	local best_d2 = nil
+
+	local function get_obj_ui_pos(obj)
+		local pos = utils_obj.safe_bone_pos(obj, "bip01_head") or obj:position()
+		return hui_world2ui_px(pos)
+	end
+
+	local function consider(obj, vec)
+		if not (obj and vec and vec.x and vec.y) then
+			return
 		end
-
-		local dist = hui_is_target_allowed(obj)
-		if not dist then
-			return false
-		end
-
-		local vec = get_obj_screen_pos(obj)
-		if not vec then
-			return false
-		end
-
 		local dx = vec.x - center_x
 		local dy = vec.y - center_y
 		local d2 = (dx * dx) + (dy * dy)
-		if d2 <= radius2 and (best_screen_d2 == nil or d2 < best_screen_d2) then
-			best_screen_d2 = d2
-			best_obj = obj
-			if d2 <= 1 then
-				return true
-			end
+		if d2 > radius2 then
+			return
 		end
-
-		return false
-	end)
-
-	if not ok then
-		return level.get_target_obj and level.get_target_obj() or nil
+		local ok, id = pcall(function()
+			return obj:id()
+		end)
+		if not (ok and id) then
+			return
+		end
+		if crosshair_only_best then
+			if best_d2 == nil or d2 < best_d2 then
+				best_d2 = d2
+				best_id = id
+			end
+		else
+			out[id] = true
+		end
 	end
 
-	return best_obj
-	]]
+	local direct = level.get_target_obj and level.get_target_obj() or nil
+	if direct then
+		local dist = hui_is_target_allowed(direct)
+		if dist and block_dist and dist > (block_dist + 0.5) then
+			direct = nil
+		end
+	end
+	if direct and hui_is_target_allowed(direct) then
+		if require_los and level and level.check_object then
+			local vis = hui_level_check_object(direct)
+			if vis == false then
+				direct = nil
+			end
+		end
+	end
+	if direct then
+		consider(direct, get_obj_ui_pos(direct))
+	end
+
+	if level.iterate_nearest then
+		local actor_pos = db.actor:position()
+		pcall(level.iterate_nearest, actor_pos, hui_range, function(obj)
+			if not obj then
+				return false
+			end
+			local dist = hui_is_target_allowed(obj)
+			if not dist then
+				return false
+			end
+			if block_dist and dist > (block_dist + 0.5) then
+				return false
+			end
+			if require_los and level and level.check_object then
+				local vis = hui_level_check_object(obj)
+				if vis == false then
+					return false
+				end
+			end
+			consider(obj, get_obj_ui_pos(obj))
+			return false
+		end)
+	end
+
+	if crosshair_only_best and best_id ~= nil then
+		out[best_id] = true
+	end
+
+	return out
 end
 
 function hui_actor_on_update(delta)
@@ -883,9 +965,16 @@ function hui_actor_on_update(delta)
 		target_storage[id] = nil
 	end
 
-	local obj = hui_pick_target()
-	if obj and hui_set_target(obj) then
-		target_storage[obj:id()] = true
+	if use_crosshair_radius then
+		local targets = hui_pick_targets_in_crosshair()
+		for id,_ in pairs(targets) do
+			target_storage[id] = true
+		end
+	else
+		local obj = hui_pick_target()
+		if obj and hui_set_target(obj) then
+			target_storage[obj:id()] = true
+		end
 	end
 
 	hui_ui_ensure()
@@ -1316,6 +1405,15 @@ local function on_option_change()
 	show_icon = mcm_get("hui/show_icon")
 	if show_icon == nil then
 		show_icon = read_hui_setting_bool("show_icon", true)
+	end
+	use_crosshair_radius = mcm_get("hui/use_crosshair_radius")
+	if use_crosshair_radius == nil then
+		use_crosshair_radius = read_hui_setting_bool("use_crosshair_radius", false)
+	end
+	crosshair_radius_px = mcm_get("hui/crosshair_radius_px") or read_hui_setting_number("crosshair_radius_px", 35)
+	crosshair_only_best = mcm_get("hui/crosshair_only_best")
+	if crosshair_only_best == nil then
+		crosshair_only_best = read_hui_setting_bool("crosshair_only_best", true)
 	end
 	hui_update_ms = hui_normalize_update_ms(mcm_get("hui/update_ms") or read_hui_setting_number("update_ms", 17))
 	hui_jitter_mode = hui_normalize_jitter_mode(mcm_get("hui/jitter_mode") or read_hui_setting_number("jitter_mode", 0))
