@@ -210,6 +210,9 @@ local HUI_DETECTING_TEXT = "ui_mcm_hui_detecting"
 
 local detected_npcs = {}
 local detect_timers = {}
+local detecting_color_state = {}
+local detecting_color_timer = 0
+local hui_ui_last_real_time = 0
 
 local function hui_get_time_ms()
 	if type(time_continual) == "function" then
@@ -1386,6 +1389,7 @@ function hui_actor_on_update(delta)
 		if current_time_sec >= start_time + detect_delay_sec then
 			detected_npcs[obj_id] = true
 			detect_timers[obj_id] = nil
+			detecting_color_state[obj_id] = nil
 		end
 	end
 
@@ -1405,6 +1409,7 @@ function hui_actor_on_update(delta)
 						detected_npcs[id] = true
 					elseif not detect_timers[id] then
 						detect_timers[id] = hui_get_time_ms() / 1000
+						detecting_color_state[id] = {timer = 0, state = 1}
 					end
 				end
 			end
@@ -1421,6 +1426,7 @@ function hui_actor_on_update(delta)
 						detected_npcs[obj_id] = true
 					elseif not detect_timers[obj_id] then
 						detect_timers[obj_id] = hui_get_time_ms() / 1000
+						detecting_color_state[obj_id] = {timer = 0, state = 1}
 					end
 				end
 			end
@@ -1430,6 +1436,7 @@ function hui_actor_on_update(delta)
 	for obj_id, start_time in pairs(detect_timers) do
 		if not target_storage[obj_id] then
 			detect_timers[obj_id] = nil
+			detecting_color_state[obj_id] = nil
 		end
 	end
 
@@ -1454,7 +1461,10 @@ end
 
 local function hui_ui_update()
 	if (HUI_UI ~= nil) then
-		HUI_UI:Update(true)
+		local current_time = hui_get_time_ms()
+		local delta_ms = current_time - hui_ui_last_real_time
+		hui_ui_last_real_time = current_time
+		HUI_UI:Update(delta_ms / 1000)
 	end
 end
 
@@ -1483,6 +1493,27 @@ function hui_ui:Update(delta)
 	if not ok then
 		return
 	end
+	
+	local current_time = hui_get_time_ms()
+	for id, timer in pairs(detect_timers) do
+		if not detecting_color_state[id] then
+			detecting_color_state[id] = {timer = current_time, state = 1}
+		else
+			if current_time - detecting_color_state[id].timer >= 50 then
+				detecting_color_state[id].timer = current_time
+				local state = detecting_color_state[id].state
+				if state == 1 then
+					state = 2
+				elseif state == 2 then
+					state = 3
+				else
+					state = 1
+				end
+				detecting_color_state[id].state = state
+			end
+		end
+	end
+	
 	local zoom_mode = axr_main.weapon_is_zoomed
 	CUIScriptWnd.Update(self)
 	for id,_ in pairs(target_storage) do
@@ -1514,10 +1545,25 @@ function hui_ui:Update(delta)
 			
 			local vec = self:GetScreenCoordinates(st.object, target_dist, self.ele[id], delta)
 
-			if (vec) then
+			if vec then
 				local dyn_s = 1
 				hui_apply_layout(self.ele[id], dyn_s)
 				hui_apply_style(self.ele[id], dyn_s, target_dist, target_relation, target_community)
+				if detect_timers[id] and self.ele[id] and self.ele[id].text2 and detecting_color_state[id] then
+					local state = detecting_color_state[id].state
+					local r, g, b
+					if state == 1 then
+						r, g, b = 120, 120, 120
+					elseif state == 2 then
+						r, g, b = 150, 150, 150
+					else
+						r, g, b = 180, 180, 180
+					end
+					local name_font = hui_get_text_font()
+					local a = hui_dyn_alpha_by_dist(target_dist)
+					hui_apply_text_style(self.ele[id].text2, a, r, g, b, name_font)
+					hui_apply_text_style(self.ele[id].text2_zoom, a, r, g, b, name_font)
+				end
 				self.ele[id].marker:SetWndPos(vec)
 				self.ele[id].marker_zoom:SetWndPos(vec)
 				local hp = nil
@@ -1598,12 +1644,10 @@ function hui_ui:Update(delta)
 						self.ele[id].text3_sh_zoom:Show(false)
 						self.ele[id].text3:Show(false)
 						self.ele[id].text3_zoom:Show(false)
-						local name_font = hui_get_text_font()
-						local a = hui_dyn_alpha_by_dist(target_dist)
-						hui_apply_text_style(self.ele[id].text2_sh, a, 0, 0, 0, name_font)
-						hui_apply_text_style(self.ele[id].text2_sh_zoom, a, 0, 0, 0, name_font)
-						hui_apply_text_style(self.ele[id].text2, a, 180, 180, 180, name_font)
-						hui_apply_text_style(self.ele[id].text2_zoom, a, 180, 180, 180, name_font)
+						self.ele[id].text2_sh:SetText(display_name)
+						self.ele[id].text2_sh_zoom:SetText(display_name)
+						self.ele[id].text2:SetText(display_name)
+						self.ele[id].text2_zoom:SetText(display_name)
 					else
 						self.ele[id].text2_sh:Show(true)
 						self.ele[id].text2_sh_zoom:Show(true)
@@ -1733,6 +1777,7 @@ function hui_ui:Update(delta)
 			self.ele[id].marker:Show(false)
 			self.ele[id].marker_zoom:Show(false)
 			self.ele[id] = nil
+			detecting_color_state[id] = nil
 		end
 	end
 end
