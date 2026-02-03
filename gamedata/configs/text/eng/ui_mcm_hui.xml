@@ -179,4 +179,25 @@
 	<string id="ui_mcm_hui_hide_hp_full_desc">
 		<text>Hide the HP bar if health is at 100%</text>
 	</string>
+	<string id="ui_mcm_hui_detect_enable">
+		<text>Enable detection delay</text>
+	</string>
+	<string id="ui_mcm_hui_detect_enable_desc">
+		<text>Enable delayed detection for distant targets</text>
+	</string>
+	<string id="ui_mcm_hui_detect_instant_dist">
+		<text>Instant detection distance (m)</text>
+	</string>
+	<string id="ui_mcm_hui_detect_instant_dist_desc">
+		<text>Maximum distance for instant target detection (1-200m)</text>
+	</string>
+	<string id="ui_mcm_hui_detect_delay_sec">
+		<text>Detection delay (sec)</text>
+	</string>
+	<string id="ui_mcm_hui_detect_delay_sec_desc">
+		<text>Delay before showing full info for distant targets (1-10s)</text>
+	</string>
+	<string id="ui_mcm_hui_detecting">
+		<text>Detecting</text>
+	</string>
 </string_table>

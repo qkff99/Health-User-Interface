@@ -194,6 +194,23 @@ local hui_last_ui_ms = nil
 local hui_pick_accum_ms = 0
 local hui_ui_accum_ms = 0
 
+local detect_enable = mcm_get("hui/detect_enable")
+if detect_enable == nil then
+	detect_enable = read_hui_setting_bool("detect_enable", false)
+end
+local detect_delay_sec = mcm_get("hui/detect_delay_sec") or read_hui_setting_number("detect_delay_sec", 3)
+if detect_delay_sec < 1 then
+	detect_delay_sec = 1
+elseif detect_delay_sec > 10 then
+	detect_delay_sec = 10
+end
+local detect_instant_dist = mcm_get("hui/detect_instant_dist") or read_hui_setting_number("detect_instant_dist", 5)
+
+local HUI_DETECTING_TEXT = "ui_mcm_hui_detecting"
+
+local detected_npcs = {}
+local detect_timers = {}
+
 local function hui_get_time_ms()
 	if type(time_continual) == "function" then
 		local ok, v = pcall(time_continual)
@@ -1363,6 +1380,15 @@ function hui_actor_on_update(delta)
 		return
 	end
 
+	local current_time_ms = hui_get_time_ms()
+	local current_time_sec = current_time_ms / 1000
+	for obj_id, start_time in pairs(detect_timers) do
+		if current_time_sec >= start_time + detect_delay_sec then
+			detected_npcs[obj_id] = true
+			detect_timers[obj_id] = nil
+		end
+	end
+
 	for id,_ in pairs(target_storage) do
 		target_storage[id] = nil
 	end
@@ -1371,11 +1397,39 @@ function hui_actor_on_update(delta)
 		local targets = hui_pick_targets_in_crosshair()
 		for id,_ in pairs(targets) do
 			target_storage[id] = true
+			if detect_enable then
+				local st = db.storage[id]
+				if st and st.object and not detected_npcs[id] then
+					local dist = math.sqrt(st.object:position():distance_to_sqr(db.actor:position()))
+					if dist <= detect_instant_dist then
+						detected_npcs[id] = true
+					elseif not detect_timers[id] then
+						detect_timers[id] = hui_get_time_ms() / 1000
+					end
+				end
+			end
 		end
 	else
 		local obj = hui_pick_target()
 		if obj and hui_set_target(obj) then
 			target_storage[obj:id()] = true
+			if detect_enable then
+				local obj_id = obj:id()
+				if not detected_npcs[obj_id] then
+					local dist = math.sqrt(obj:position():distance_to_sqr(db.actor:position()))
+					if dist <= detect_instant_dist then
+						detected_npcs[obj_id] = true
+					elseif not detect_timers[obj_id] then
+						detect_timers[obj_id] = hui_get_time_ms() / 1000
+					end
+				end
+			end
+		end
+	end
+
+	for obj_id, start_time in pairs(detect_timers) do
+		if not target_storage[obj_id] then
+			detect_timers[obj_id] = nil
 		end
 	end
 
@@ -1483,13 +1537,13 @@ function hui_ui:Update(delta)
 					hp = 1
 				end
 				local hide_full = hide_hp_full and hp >= 0.999
-				self.ele[id].hp_shadow:Show(not hide_full)
-				self.ele[id].hp_shadow_zoom:Show(not hide_full)
-				self.ele[id].hp_bg:Show(not hide_full)
-				self.ele[id].hp_bg_zoom:Show(not hide_full)
-				self.ele[id].hp:Show(not hide_full)
-				self.ele[id].hp_zoom:Show(not hide_full)
-				if not hide_full then
+				self.ele[id].hp_shadow:Show(not hide_full and not detect_timers[id])
+				self.ele[id].hp_shadow_zoom:Show(not hide_full and not detect_timers[id])
+				self.ele[id].hp_bg:Show(not hide_full and not detect_timers[id])
+				self.ele[id].hp_bg_zoom:Show(not hide_full and not detect_timers[id])
+				self.ele[id].hp:Show(not hide_full and not detect_timers[id])
+				self.ele[id].hp_zoom:Show(not hide_full and not detect_timers[id])
+				if not hide_full and not detect_timers[id] then
 					if self.ele[id].hp_shadow.SetTextureColor then
 						self.ele[id].hp_shadow:SetTextureColor(GetARGB(160, 0, 0, 0))
 					end
@@ -1507,7 +1561,7 @@ function hui_ui:Update(delta)
 					self.ele[id].hp_zoom:SetWndSize(vector2():set(fill_w, hp_h))
 				end
 
-				if show_distance then
+				if show_distance and not detect_timers[id] then
 					self.ele[id].text1_sh:Show(true)
 					self.ele[id].text1_sh_zoom:Show(true)
 					self.ele[id].text1:Show(true)
@@ -1529,26 +1583,49 @@ function hui_ui:Update(delta)
 				end
 
 				if show_name then
-					self.ele[id].text2_sh:Show(true)
-					self.ele[id].text2_sh_zoom:Show(true)
-					self.ele[id].text2:Show(true)
-					self.ele[id].text2_zoom:Show(true)
-					self.ele[id].text3_sh:Show(true)
-					self.ele[id].text3_sh_zoom:Show(true)
-					self.ele[id].text3:Show(true)
-					self.ele[id].text3_zoom:Show(true)
-					local faction_text = target_faction or ""
-					if faction_text ~= "" then
-						faction_text = "[" .. faction_text .. "]"
+					local display_name = target_name or ""
+					if detect_timers[id] then
+						display_name = game.translate_string(HUI_DETECTING_TEXT)
+						self.ele[id].text2_sh:Show(true)
+						self.ele[id].text2_sh_zoom:Show(true)
+						self.ele[id].text2:Show(true)
+						self.ele[id].text2_zoom:Show(true)
+						self.ele[id].text2_sh:SetText(display_name)
+						self.ele[id].text2_sh_zoom:SetText(display_name)
+						self.ele[id].text2:SetText(display_name)
+						self.ele[id].text2_zoom:SetText(display_name)
+						self.ele[id].text3_sh:Show(false)
+						self.ele[id].text3_sh_zoom:Show(false)
+						self.ele[id].text3:Show(false)
+						self.ele[id].text3_zoom:Show(false)
+						local name_font = hui_get_text_font()
+						local a = hui_dyn_alpha_by_dist(target_dist)
+						hui_apply_text_style(self.ele[id].text2_sh, a, 0, 0, 0, name_font)
+						hui_apply_text_style(self.ele[id].text2_sh_zoom, a, 0, 0, 0, name_font)
+						hui_apply_text_style(self.ele[id].text2, a, 180, 180, 180, name_font)
+						hui_apply_text_style(self.ele[id].text2_zoom, a, 180, 180, 180, name_font)
+					else
+						self.ele[id].text2_sh:Show(true)
+						self.ele[id].text2_sh_zoom:Show(true)
+						self.ele[id].text2:Show(true)
+						self.ele[id].text2_zoom:Show(true)
+						self.ele[id].text3_sh:Show(true)
+						self.ele[id].text3_sh_zoom:Show(true)
+						self.ele[id].text3:Show(true)
+						self.ele[id].text3_zoom:Show(true)
+						local faction_text = target_faction or ""
+						if faction_text ~= "" then
+							faction_text = "[" .. faction_text .. "]"
+						end
+						self.ele[id].text2_sh:SetText(display_name)
+						self.ele[id].text2_sh_zoom:SetText(display_name)
+						self.ele[id].text2:SetText(display_name)
+						self.ele[id].text2_zoom:SetText(display_name)
+						self.ele[id].text3_sh:SetText(faction_text)
+						self.ele[id].text3_sh_zoom:SetText(faction_text)
+						self.ele[id].text3:SetText(faction_text)
+						self.ele[id].text3_zoom:SetText(faction_text)
 					end
-					self.ele[id].text2_sh:SetText(target_name or "")
-					self.ele[id].text2_sh_zoom:SetText(target_name or "")
-					self.ele[id].text2:SetText(target_name or "")
-					self.ele[id].text2_zoom:SetText(target_name or "")
-					self.ele[id].text3_sh:SetText(faction_text)
-					self.ele[id].text3_sh_zoom:SetText(faction_text)
-					self.ele[id].text3:SetText(faction_text)
-					self.ele[id].text3_zoom:SetText(faction_text)
 				else
 					self.ele[id].text2_sh:SetText("")
 					self.ele[id].text2_sh_zoom:SetText("")
