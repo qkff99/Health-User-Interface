@@ -117,6 +117,61 @@ local function hui_normalize_update_ms(v)
 end
 
 local hui_update_ms = hui_normalize_update_ms(mcm_get("hui/update_ms") or read_hui_setting_number("update_ms", 17))
+local function hui_normalize_jitter_mode(v)
+	v = tonumber(v) or 0
+	if v < 0 then
+		v = 0
+	elseif v > 3 then
+		v = 3
+	end
+	return math.floor(v)
+end
+
+local function hui_normalize_deadzone_px(v)
+	v = tonumber(v) or 2
+	if v < 0 then
+		v = 0
+	elseif v > 20 then
+		v = 20
+	end
+	return math.floor(v)
+end
+
+local function hui_normalize_tau_ms(v)
+	v = tonumber(v) or 120
+	if v < 0 then
+		v = 0
+	elseif v > 2000 then
+		v = 2000
+	end
+	return math.floor(v)
+end
+
+local function hui_normalize_max_step_px(v)
+	v = tonumber(v) or 0
+	if v < 0 then
+		v = 0
+	elseif v > 200 then
+		v = 200
+	end
+	return math.floor(v)
+end
+
+local function hui_normalize_anchor_mode(v)
+	v = tonumber(v) or 1
+	if v < 1 then
+		v = 1
+	elseif v > 4 then
+		v = 4
+	end
+	return math.floor(v)
+end
+
+local hui_jitter_mode = hui_normalize_jitter_mode(mcm_get("hui/jitter_mode") or read_hui_setting_number("jitter_mode", 0))
+local hui_jitter_deadzone_px = hui_normalize_deadzone_px(mcm_get("hui/jitter_deadzone_px") or read_hui_setting_number("jitter_deadzone_px", 2))
+local hui_jitter_tau_ms = hui_normalize_tau_ms(mcm_get("hui/jitter_tau_ms") or read_hui_setting_number("jitter_tau_ms", 120))
+local hui_jitter_max_step_px = hui_normalize_max_step_px(mcm_get("hui/jitter_max_step_px") or read_hui_setting_number("jitter_max_step_px", 0))
+local hui_anchor_mode = hui_normalize_anchor_mode(mcm_get("hui/anchor_mode") or read_hui_setting_number("anchor_mode", 1))
 local hui_last_pick_ms = nil
 local hui_last_ui_ms = nil
 local hui_pick_accum_ms = 0
@@ -912,36 +967,14 @@ function hui_ui:Update(delta)
 				self.ele[id].text3_zoom = self.xml:InitTextWnd("marker_zoom:npc_faction",self.ele[id].marker_zoom)
 			end
 			
-			local vec = self:GetScreenCoordinates(st.object, target_dist)
+			local vec = self:GetScreenCoordinates(st.object, target_dist, self.ele[id], delta)
 
 			if (vec) then
 				local dyn_s = 1
 				hui_apply_layout(self.ele[id], dyn_s)
 				hui_apply_style(self.ele[id], dyn_s, target_dist, target_relation, target_community)
-				local px = vec.x - (MARKER_W * 0.5)
-				local py = vec.y - MARKER_H
-				local jitter = (hui_update_ms and hui_update_ms > 0) and 1 or 0
-				if jitter > 0 and self.ele[id].last_px_x ~= nil and self.ele[id].last_px_y ~= nil then
-					local dx = px - self.ele[id].last_px_x
-					local dy = py - self.ele[id].last_px_y
-					if dx < 0 then
-						dx = -dx
-					end
-					if dy < 0 then
-						dy = -dy
-					end
-					if dx <= jitter and dy <= jitter then
-						px = self.ele[id].last_px_x
-						py = self.ele[id].last_px_y
-					end
-				end
-				px = math.floor(px + 0.5)
-				py = math.floor(py + 0.5)
-				self.ele[id].last_px_x = px
-				self.ele[id].last_px_y = py
-				local pos = vector2():set(px, py)
-				self.ele[id].marker:SetWndPos(pos)
-				self.ele[id].marker_zoom:SetWndPos(pos)
+				self.ele[id].marker:SetWndPos(vec)
+				self.ele[id].marker_zoom:SetWndPos(vec)
 				self.ele[id].hp_shadow:Show(true)
 				self.ele[id].hp_shadow_zoom:Show(true)
 				self.ele[id].hp_bg:Show(true)
@@ -1051,6 +1084,11 @@ function hui_ui:Update(delta)
 			else
 				self.ele[id].last_px_x = nil
 				self.ele[id].last_px_y = nil
+				self.ele[id].j3x = nil
+				self.ele[id].j3y = nil
+				self.ele[id].j3z = nil
+				self.ele[id].j2x = nil
+				self.ele[id].j2y = nil
 				self.ele[id].text1:SetText("")
 				self.ele[id].text1_zoom:SetText("")
 				self.ele[id].text2:SetText("")
@@ -1128,24 +1166,122 @@ function hui_ui:Update(delta)
 	end
 end
 
-function hui_ui:GetScreenCoordinates(obj, dist)
-	local pos = utils_obj.safe_bone_pos(obj, "bip01_head") or obj:position()
+function hui_ui:GetScreenCoordinates(obj, dist, ele, delta)
+	local pos = nil
+	if hui_anchor_mode == 2 then
+		pos = utils_obj.safe_bone_pos(obj, "bip01_neck")
+	elseif hui_anchor_mode == 3 then
+		pos = utils_obj.safe_bone_pos(obj, "bip01_spine2")
+	elseif hui_anchor_mode == 4 then
+		pos = obj:position()
+	else
+		pos = utils_obj.safe_bone_pos(obj, "bip01_head")
+	end
+	pos = pos or obj:position()
 	if not pos then
 		return nil
 	end
-	
-	-- Base offset scaled by FOV (to keep it somewhat consistent on screen)
+
 	local base_off = hui_head_y_offset_by_dist(dist)
 	local fov_k = hui_get_fov_factor()
-	
-	-- Total offset: scaled base + direct bias
-	-- Applying bias separately makes it predictable for the user regardless of zoom
 	local off = (base_off * fov_k) + (HEAD_Y_OFFSET_BIAS or 0)
-	
-	if off ~= 0 then
-		pos = vector():set(pos.x, pos.y + off, pos.z)
+
+	local x3 = pos.x
+	local y3 = pos.y + (off or 0)
+	local z3 = pos.z
+
+	local dt_ms = hui_get_dt_ms(delta)
+	if not dt_ms then
+		dt_ms = (hui_update_ms and hui_update_ms > 0) and hui_update_ms or 16
 	end
-	return hui_world2ui_px(pos)
+
+	if hui_jitter_mode == 3 and ele then
+		local tau = hui_jitter_tau_ms or 0
+		local a = 1
+		if tau > 0 and dt_ms > 0 then
+			a = 1 - math.exp(-dt_ms / tau)
+		end
+		if ele.j3x ~= nil then
+			ele.j3x = ele.j3x + (x3 - ele.j3x) * a
+			ele.j3y = ele.j3y + (y3 - ele.j3y) * a
+			ele.j3z = ele.j3z + (z3 - ele.j3z) * a
+		else
+			ele.j3x = x3
+			ele.j3y = y3
+			ele.j3z = z3
+		end
+		x3 = ele.j3x
+		y3 = ele.j3y
+		z3 = ele.j3z
+	end
+
+	local vec = hui_world2ui_px(vector():set(x3, y3, z3))
+	if not vec then
+		return nil
+	end
+
+	local x2 = vec.x
+	local y2 = vec.y
+
+	if hui_jitter_mode == 2 and ele then
+		local tau = hui_jitter_tau_ms or 0
+		local a = 1
+		if tau > 0 and dt_ms > 0 then
+			a = 1 - math.exp(-dt_ms / tau)
+		end
+		if ele.j2x ~= nil then
+			ele.j2x = ele.j2x + (x2 - ele.j2x) * a
+			ele.j2y = ele.j2y + (y2 - ele.j2y) * a
+		else
+			ele.j2x = x2
+			ele.j2y = y2
+		end
+		x2 = ele.j2x
+		y2 = ele.j2y
+	end
+
+	local mx = x2 - (MARKER_W * 0.5)
+	local my = y2 - MARKER_H
+
+	if ele then
+		local max_step = hui_jitter_max_step_px or 0
+		if max_step > 0 and ele.last_px_x ~= nil and ele.last_px_y ~= nil then
+			local dx = mx - ele.last_px_x
+			local dy = my - ele.last_px_y
+			local d = math.sqrt((dx * dx) + (dy * dy))
+			if d > max_step and d > 0 then
+				local k = max_step / d
+				mx = ele.last_px_x + (dx * k)
+				my = ele.last_px_y + (dy * k)
+			end
+		end
+
+		local dz = (hui_jitter_mode ~= 0) and (hui_jitter_deadzone_px or 0) or 0
+		if dz > 0 and ele.last_px_x ~= nil and ele.last_px_y ~= nil then
+			local dx = mx - ele.last_px_x
+			local dy = my - ele.last_px_y
+			if dx < 0 then
+				dx = -dx
+			end
+			if dy < 0 then
+				dy = -dy
+			end
+			if dx <= dz and dy <= dz then
+				mx = ele.last_px_x
+				my = ele.last_px_y
+			end
+		end
+	end
+
+	mx = math.floor(mx + 0.5)
+	my = math.floor(my + 0.5)
+
+	if ele then
+		ele.last_px_x = mx
+		ele.last_px_y = my
+	end
+
+	return vector2():set(mx, my)
 end
 
 
@@ -1182,6 +1318,11 @@ local function on_option_change()
 		show_icon = read_hui_setting_bool("show_icon", true)
 	end
 	hui_update_ms = hui_normalize_update_ms(mcm_get("hui/update_ms") or read_hui_setting_number("update_ms", 17))
+	hui_jitter_mode = hui_normalize_jitter_mode(mcm_get("hui/jitter_mode") or read_hui_setting_number("jitter_mode", 0))
+	hui_jitter_deadzone_px = hui_normalize_deadzone_px(mcm_get("hui/jitter_deadzone_px") or read_hui_setting_number("jitter_deadzone_px", 2))
+	hui_jitter_tau_ms = hui_normalize_tau_ms(mcm_get("hui/jitter_tau_ms") or read_hui_setting_number("jitter_tau_ms", 120))
+	hui_jitter_max_step_px = hui_normalize_max_step_px(mcm_get("hui/jitter_max_step_px") or read_hui_setting_number("jitter_max_step_px", 0))
+	hui_anchor_mode = hui_normalize_anchor_mode(mcm_get("hui/anchor_mode") or read_hui_setting_number("anchor_mode", 1))
 	hui_last_pick_ms = nil
 	hui_last_ui_ms = nil
 	hui_pick_accum_ms = 0
