@@ -710,6 +710,25 @@ local function hui_dyn_alpha_by_dist(dist)
 	return a_near + ((a_far - a_near) * t)
 end
 
+local function hui_get_hp_color(hp)
+	local low_hp_threshold = 0.01
+	if hp >= 1.0 then
+		return 0, 255, 0
+	end
+	if hp <= low_hp_threshold then
+		return 255, 0, 0
+	end
+	local t = (hp - low_hp_threshold) / (1.0 - low_hp_threshold)
+	if t < 0 then
+		t = 0
+	elseif t > 1 then
+		t = 1
+	end
+	local r = 255 + ((0 - 255) * t)
+	local g = 0 + ((255 - 0) * t)
+	return math.floor(r + 0.5), math.floor(g + 0.5), 0
+end
+
 local function hui_get_text_font()
 	if GetFontLetterica16Russian then
 		return GetFontLetterica16Russian()
@@ -1606,6 +1625,13 @@ function hui_ui:Update(delta)
 					end
 					if self.ele[id].hp_shadow_zoom.SetTextureColor then
 						self.ele[id].hp_shadow_zoom:SetTextureColor(GetARGB(160, 0, 0, 0))
+					end
+					local hp_r, hp_g, hp_b = hui_get_hp_color(hp)
+					if self.ele[id].hp.SetTextureColor then
+						self.ele[id].hp:SetTextureColor(GetARGB(255, hp_r, hp_g, hp_b))
+					end
+					if self.ele[id].hp_zoom.SetTextureColor then
+						self.ele[id].hp_zoom:SetTextureColor(GetARGB(255, hp_r, hp_g, hp_b))
 					end
 					local hp_w = self.ele[id].hp_w or HP_BAR_W
 					local hp_h = self.ele[id].hp_h or 5
