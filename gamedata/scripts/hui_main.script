@@ -106,6 +106,139 @@ if show_icon == nil then
 	show_icon = read_hui_setting_bool("show_icon", true)
 end
 
+local function hui_normalize_update_ms(v)
+	v = tonumber(v) or 17
+	if v < 0 then
+		v = 0
+	elseif v > 1000 then
+		v = 1000
+	end
+	return math.floor(v)
+end
+
+local hui_update_ms = hui_normalize_update_ms(mcm_get("hui/update_ms") or read_hui_setting_number("update_ms", 17))
+local hui_last_pick_ms = nil
+local hui_last_ui_ms = nil
+local hui_pick_accum_ms = 0
+local hui_ui_accum_ms = 0
+
+local function hui_get_time_ms()
+	if type(time_continual) == "function" then
+		local ok, v = pcall(time_continual)
+		if ok and v ~= nil then
+			return v
+		end
+	end
+	if type(time_global) == "function" then
+		local ok, v = pcall(time_global)
+		if ok and v ~= nil then
+			return v
+		end
+	end
+	if device then
+		local dev = nil
+		if type(device) == "function" then
+			local ok, v = pcall(function()
+				return device()
+			end)
+			if ok then
+				dev = v
+			end
+		else
+			dev = device
+		end
+		if dev and dev.time_global then
+			local ok, v = pcall(function()
+				return dev:time_global()
+			end)
+			if ok and v ~= nil then
+				return v
+			end
+		end
+	end
+	if os and os.clock then
+		local ok, v = pcall(os.clock)
+		if ok and v ~= nil then
+			return math.floor(v * 1000)
+		end
+	end
+	return nil
+end
+
+local function hui_get_device_obj()
+	if not device then
+		return nil
+	end
+	if type(device) == "function" then
+		local ok, v = pcall(function()
+			return device()
+		end)
+		if ok then
+			return v
+		end
+		return nil
+	end
+	return device
+end
+
+local function hui_get_dt_ms(delta)
+	local d = tonumber(delta)
+	if d and d > 0 then
+		if d <= 1 then
+			return d * 1000
+		end
+		return d
+	end
+
+	local dev = hui_get_device_obj()
+	if not dev then
+		return nil
+	end
+
+	local fdt = dev.f_time_delta
+	if type(fdt) ~= "number" then
+		fdt = tonumber(fdt)
+	end
+	if fdt and fdt > 0 then
+		return fdt * 1000
+	end
+
+	local dt = dev.time_delta
+	if type(dt) ~= "number" then
+		dt = tonumber(dt)
+	end
+	if dt and dt > 0 then
+		if dt <= 1 then
+			return dt * 1000
+		end
+		return dt
+	end
+
+	return nil
+end
+
+local function hui_should_tick(accum_ms, last_ms, delta, update_ms)
+	if not update_ms or update_ms <= 0 then
+		return true, accum_ms, last_ms
+	end
+
+	local dt_ms = hui_get_dt_ms(delta)
+	if dt_ms then
+		accum_ms = accum_ms + dt_ms
+		if accum_ms < update_ms then
+			return false, accum_ms, last_ms
+		end
+		accum_ms = accum_ms - update_ms
+		return true, accum_ms, last_ms
+	end
+
+	local now = hui_get_time_ms()
+	if now and last_ms and (now - last_ms) < update_ms then
+		return false, accum_ms, last_ms
+	end
+	return true, accum_ms, now or last_ms
+end
+
 local crosshair_radius_px = read_hui_setting_number("crosshair_radius_px", 35)
 local hui_debug = (read_hui_setting_number("debug", 0) or 0) >= 1
 local hui_debug_last_ms = 0
@@ -683,7 +816,14 @@ local function hui_pick_target()
 	]]
 end
 
-function hui_actor_on_update()
+function hui_actor_on_update(delta)
+	local ok, accum, last = hui_should_tick(hui_pick_accum_ms, hui_last_pick_ms, delta, hui_update_ms)
+	hui_pick_accum_ms = accum
+	hui_last_pick_ms = last
+	if not ok then
+		return
+	end
+
 	for id,_ in pairs(target_storage) do
 		target_storage[id] = nil
 	end
@@ -736,7 +876,13 @@ function hui_ui:InitControls()
 
 end
 
-function hui_ui:Update()
+function hui_ui:Update(delta)
+	local ok, accum, last = hui_should_tick(hui_ui_accum_ms, hui_last_ui_ms, delta, hui_update_ms)
+	hui_ui_accum_ms = accum
+	hui_last_ui_ms = last
+	if not ok then
+		return
+	end
 	local zoom_mode = axr_main.weapon_is_zoomed
 	CUIScriptWnd.Update(self)
 	for id,_ in pairs(target_storage) do
@@ -772,7 +918,28 @@ function hui_ui:Update()
 				local dyn_s = 1
 				hui_apply_layout(self.ele[id], dyn_s)
 				hui_apply_style(self.ele[id], dyn_s, target_dist, target_relation, target_community)
-				local pos = vector2():set(vec.x - (MARKER_W * 0.5), vec.y - MARKER_H)
+				local px = vec.x - (MARKER_W * 0.5)
+				local py = vec.y - MARKER_H
+				local jitter = (hui_update_ms and hui_update_ms > 0) and 1 or 0
+				if jitter > 0 and self.ele[id].last_px_x ~= nil and self.ele[id].last_px_y ~= nil then
+					local dx = px - self.ele[id].last_px_x
+					local dy = py - self.ele[id].last_px_y
+					if dx < 0 then
+						dx = -dx
+					end
+					if dy < 0 then
+						dy = -dy
+					end
+					if dx <= jitter and dy <= jitter then
+						px = self.ele[id].last_px_x
+						py = self.ele[id].last_px_y
+					end
+				end
+				px = math.floor(px + 0.5)
+				py = math.floor(py + 0.5)
+				self.ele[id].last_px_x = px
+				self.ele[id].last_px_y = py
+				local pos = vector2():set(px, py)
 				self.ele[id].marker:SetWndPos(pos)
 				self.ele[id].marker_zoom:SetWndPos(pos)
 				self.ele[id].hp_shadow:Show(true)
@@ -882,6 +1049,8 @@ function hui_ui:Update()
 					self.ele[id].marker_zoom:Show(false)	
 				end	
 			else
+				self.ele[id].last_px_x = nil
+				self.ele[id].last_px_y = nil
 				self.ele[id].text1:SetText("")
 				self.ele[id].text1_zoom:SetText("")
 				self.ele[id].text2:SetText("")
@@ -1012,6 +1181,11 @@ local function on_option_change()
 	if show_icon == nil then
 		show_icon = read_hui_setting_bool("show_icon", true)
 	end
+	hui_update_ms = hui_normalize_update_ms(mcm_get("hui/update_ms") or read_hui_setting_number("update_ms", 17))
+	hui_last_pick_ms = nil
+	hui_last_ui_ms = nil
+	hui_pick_accum_ms = 0
+	hui_ui_accum_ms = 0
 	hui_ui_ensure()
 end
 
