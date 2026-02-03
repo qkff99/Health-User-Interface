@@ -363,39 +363,217 @@ local target_community
 local target_relation
 local fov_ref = nil
 
-local monster_clsid_to_name = {
-	[clsid.rat] 			= "rat",
-	[clsid.rat_s]			= "rat",
-	[clsid.bloodsucker_s] 	= "bloodsucker",
-	[clsid.boar_s] 			= "boar",
-	[clsid.burer_s] 		= "burer",
-	[clsid.chimera_s]		= "chimera",
-	[clsid.controller_s]	= "controller",
-	[clsid.dog_s]			= "dog",
-	[clsid.flesh_s]			= "flesh",
-	[clsid.gigant_s]		= "gigant",
-	[clsid.psy_dog_s]		= "psy_dog",
-	[clsid.psy_dog_phantom_s] = "psy_dog",
-	[clsid.pseudodog_s]		= "pseudodog",
-	[clsid.snork_s]			= "snork",
-	[clsid.tushkano_s]		= "tushkano",
-	[clsid.cat_s]			= "cat",
-	[clsid.fracture_s]		= "fracture",
-	[clsid.zombie_s]		= "zombie"
+local hui_monster_kind_to_loc_id = {
+	dog = "encyclopedia_mutants_blind_dog",
+	bloodsucker = "encyclopedia_mutants_bloodsucker",
+	boar = "encyclopedia_mutants_boar",
+	burer = "encyclopedia_mutants_burer",
+	cat = "encyclopedia_mutants_cat",
+	chimera = "encyclopedia_mutants_chimera",
+	controller = "encyclopedia_mutants_controller",
+	bird = "encyclopedia_mutants_crow",
+	flesh = "encyclopedia_mutants_flesh",
+	fracture = "encyclopedia_mutants_fracture",
+	pseudodog = "encyclopedia_mutants_pseudodog",
+	giant = "encyclopedia_mutants_pseudogiant",
+	snork = "encyclopedia_mutants_snork",
+	tushkano = "encyclopedia_mutants_tushkano",
+	zombie = "encyclopedia_mutants_zombie",
+	SM_KARLIK = "encyclopedia_mutants_karlik",
+	SM_LURKER = "encyclopedia_mutants_lurker",
+	SM_POLTER_G = "encyclopedia_mutants_poltergeist",
+	SM_PYRO_G = "encyclopedia_mutants_pyrogeist",
+	SM_PSEUDO_G = "encyclopedia_mutants_pseudogeist",
+	SM_PSYSUCKER = "encyclopedia_mutants_psysucker",
 }
-local monster_kind_to_name = {
-	["SM_KARLIK"]			= "karlik",
-	["SM_PSYSUCKER"]		= "psysucker",
-	["SM_LURKER"]			= "lurker",
-    ["SM_POLTER_G"]			= "poltergeist",
-	["SM_PYRO_G"]			= "pyrogeist",
-	["SM_PSEUDO_G"]			= "pseudogeist"
-}
+
+local function hui_get_obj_section(obj)
+	if not obj then
+		return nil
+	end
+	if type(obj.section) == "function" then
+		local ok, v = pcall(function()
+			return obj:section()
+		end)
+		if ok and v and v ~= "" then
+			return v
+		end
+	end
+	if type(obj.section_name) == "function" then
+		local ok, v = pcall(function()
+			return obj:section_name()
+		end)
+		if ok and v and v ~= "" then
+			return v
+		end
+	end
+	if type(obj.section_name) == "string" and obj.section_name ~= "" then
+		return obj.section_name
+	end
+	if type(obj.section) == "string" and obj.section ~= "" then
+		return obj.section
+	end
+	return nil
+end
+
+local function hui_ini_sys()
+	if ini_sys then
+		return ini_sys
+	end
+	if system_ini and type(system_ini) == "function" then
+		return system_ini()
+	end
+	return nil
+end
+
+local function hui_read_sec_param(sec, key)
+	if not sec or sec == "" or not key or key == "" then
+		return nil
+	end
+	if SYS_GetParam then
+		local ok, v = pcall(function()
+			return SYS_GetParam(0, sec, key)
+		end)
+		if ok and v and v ~= "" then
+			return v
+		end
+	end
+	if system_ini and type(system_ini) == "function" then
+		local ini = system_ini()
+		if ini and ini.r_string then
+			if ini.line_exist then
+				local ok, exists = pcall(function()
+					return ini:line_exist(sec, key)
+				end)
+				if ok and not exists then
+					return nil
+				end
+			end
+			local ok, v = pcall(function()
+				return ini:r_string(sec, key)
+			end)
+			if ok and v and v ~= "" then
+				return v
+			end
+		end
+	end
+	return nil
+end
+
+local function hui_read_sec_param_ex(sec, key)
+	local ini = hui_ini_sys()
+	if ini and ini.r_string_ex then
+		local ok, v = pcall(function()
+			return ini:r_string_ex(sec, key)
+		end)
+		if ok and v and v ~= "" then
+			return v
+		end
+	end
+	return hui_read_sec_param(sec, key)
+end
+
+local function hui_translate_string(id)
+	if not id or id == "" then
+		return nil
+	end
+	if game and game.translate_string then
+		local ok, tr = pcall(function()
+			return game.translate_string(id)
+		end)
+		if ok and tr and tr ~= "" and tr ~= id then
+			return tr
+		end
+	end
+	return nil
+end
+
+local function hui_is_probably_loc_id(s)
+	if type(s) ~= "string" or s == "" then
+		return false
+	end
+	if string.find(s, " ", 1, true) then
+		return false
+	end
+	if string.find(s, "\\", 1, true) or string.find(s, "/", 1, true) then
+		return false
+	end
+	if string.sub(s, 1, 3) == "st_" then
+		return true
+	end
+	if string.sub(s, 1, 3) == "ui_" then
+		return true
+	end
+	if string.sub(s, 1, 13) == "encyclopedia_" then
+		return true
+	end
+	if string.find(s, "mutants_", 1, true) or string.find(s, "monster_", 1, true) then
+		return true
+	end
+	return false
+end
+
+local function hui_get_mutant_loc_id_by_section(sec)
+	if not sec or sec == "" then
+		return nil
+	end
+	if string and string.find then
+		if string.find(sec, "rotan", 1, true) then
+			return "encyclopedia_mutants_rat"
+		end
+		if string.find(sec, "psy_dog", 1, true) then
+			return "encyclopedia_mutants_psydog"
+		end
+	end
+	local what = hui_read_sec_param_ex(sec, "kind") or hui_read_sec_param_ex(sec, "species")
+	if not what or what == "" then
+		return nil
+	end
+	local loc_id = hui_monster_kind_to_loc_id[what]
+	if loc_id and loc_id ~= "" then
+		return loc_id
+	end
+	local guess = "encyclopedia_mutants_" .. tostring(what)
+	if hui_translate_string(guess) then
+		return guess
+	end
+	return nil
+end
+
 local function GetMutantName(obj)
-    local sec = type(obj.section) == "function" and obj:section() or obj:section_name()
-    local kind = SYS_GetParam(0, sec, "kind")
-    local cls = obj:clsid()
-    return monster_kind_to_name[kind] or monster_clsid_to_name[cls]
+	if not obj then
+		return nil
+	end
+	local sec = hui_get_obj_section(obj)
+	if not sec or sec == "" then
+		return nil
+	end
+	local inv_name = hui_read_sec_param_ex(sec, "inv_name") or hui_read_sec_param_ex(sec, "inv_name_short") or hui_read_sec_param_ex(sec, "name")
+	if inv_name and inv_name ~= "" then
+		local tr = hui_translate_string(inv_name)
+		if tr then
+			return tr
+		end
+		if not hui_is_probably_loc_id(inv_name) then
+			return inv_name
+		end
+	end
+	local loc_id = hui_get_mutant_loc_id_by_section(sec)
+	if loc_id and loc_id ~= "" then
+		local tr = hui_translate_string(loc_id)
+		if tr then
+			return tr
+		end
+	end
+	if obj.character_name then
+		local ok, v = pcall(function()
+			return obj:character_name()
+		end)
+		if ok and v and v ~= "" and v ~= sec then
+			return v
+		end
+	end
+	return sec
 end
 
 local function get_obj_screen_pos(obj)
@@ -631,6 +809,9 @@ local function hui_get_faction_rgb_by_community(comm)
 	end
 	if comm == "stalker" then
 		return 255, 255, 0
+	end
+	if comm == "bandit" then
+		return 115, 70, 30
 	end
 	if comm == "csky" then
 		return 0, 200, 255
