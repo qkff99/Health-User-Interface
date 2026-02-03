@@ -143,4 +143,16 @@
 	<string id="ui_mcm_hui_hp_bar_max_w">
 		<text>HP bar max width</text>
 	</string>
+	<string id="ui_mcm_hui_hp_bar_offset_x">
+		<text>HP bar X offset (px)</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_offset_x_desc">
+		<text>Move the HP bar left/right (in marker pixels)</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_offset_y">
+		<text>HP bar Y offset (px)</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_offset_y_desc">
+		<text>Move the HP bar up/down (in marker pixels)</text>
+	</string>
 </string_table>

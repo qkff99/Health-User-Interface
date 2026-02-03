@@ -84,6 +84,8 @@ local FOV_COMP_WEIGHT = mcm_get("hui/fov_comp_weight") or read_hui_setting_numbe
 local HP_BAR_W = mcm_get("hui/hp_bar_w") or read_hui_setting_number("hp_bar_w", 70)
 local HP_BAR_MIN_W = mcm_get("hui/hp_bar_min_w") or read_hui_setting_number("hp_bar_min_w", 5)
 local HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 50)
+local HP_BAR_OFFSET_X = mcm_get("hui/hp_bar_offset_x") or read_hui_setting_number("hp_bar_offset_x", 0)
+local HP_BAR_OFFSET_Y = mcm_get("hui/hp_bar_offset_y") or read_hui_setting_number("hp_bar_offset_y", 0)
 
 local hui_range = mcm_get("hui/range") or read_hui_setting_number("range", 500)
 local hui_scale = 1
@@ -587,8 +589,8 @@ local function hui_apply_layout(ele, s)
 		hp_w = HP_BAR_MAX_W
 	end
 	local hp_h = 5
-	local hp_x = (w - hp_w) * 0.5
-	local hp_y = 30
+	local hp_x = (w - hp_w) * 0.5 + (HP_BAR_OFFSET_X * s)
+	local hp_y = 30 + (HP_BAR_OFFSET_Y * s)
 	ele.hp_w = hp_w
 	ele.hp_h = hp_h
 	ele.hp:SetWndPos(vector2():set(hp_x, hp_y))
@@ -1389,6 +1391,8 @@ local function on_option_change()
 	HP_BAR_W = mcm_get("hui/hp_bar_w") or read_hui_setting_number("hp_bar_w", 70)
 	HP_BAR_MIN_W = mcm_get("hui/hp_bar_min_w") or read_hui_setting_number("hp_bar_min_w", 5)
 	HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 50)
+	HP_BAR_OFFSET_X = mcm_get("hui/hp_bar_offset_x") or read_hui_setting_number("hp_bar_offset_x", 0)
+	HP_BAR_OFFSET_Y = mcm_get("hui/hp_bar_offset_y") or read_hui_setting_number("hp_bar_offset_y", 0)
 	show_distance = mcm_get("hui/show_distance")
 	if show_distance == nil then
 		show_distance = read_hui_setting_bool("show_distance", true)

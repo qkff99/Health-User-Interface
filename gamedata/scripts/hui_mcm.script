@@ -26,6 +26,8 @@ function on_mcm_load()
                         { id = "hp_bar_w",  type =  "track", val = 2, min = 10, max = 200, step = 1, def = 70 },
                         { id = "hp_bar_min_w",  type =  "track", val = 2, min = 5, max = 200, step = 1, def = 5 },
                         { id = "hp_bar_max_w",  type =  "track", val = 2, min = 5, max = 250, step = 1, def = 50 },
+                        { id = "hp_bar_offset_x",  type =  "track", val = 2, min = -200, max = 200, step = 1, def = 0 },
+                        { id = "hp_bar_offset_y",  type =  "track", val = 2, min = -200, max = 200, step = 1, def = 0 },
       }
     }
 
