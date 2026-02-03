@@ -86,6 +86,10 @@ local HP_BAR_MIN_W = mcm_get("hui/hp_bar_min_w") or read_hui_setting_number("hp_
 local HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 50)
 local HP_BAR_OFFSET_X = mcm_get("hui/hp_bar_offset_x") or read_hui_setting_number("hp_bar_offset_x", 0)
 local HP_BAR_OFFSET_Y = mcm_get("hui/hp_bar_offset_y") or read_hui_setting_number("hp_bar_offset_y", 0)
+local hide_hp_full = mcm_get("hui/hide_hp_full")
+if hide_hp_full == nil then
+	hide_hp_full = read_hui_setting_bool("hide_hp_full", true)
+end
 
 local hui_range = mcm_get("hui/range") or read_hui_setting_number("range", 500)
 local hui_scale = 1
@@ -111,7 +115,9 @@ local use_crosshair_radius = mcm_get("hui/use_crosshair_radius")
 if use_crosshair_radius == nil then
 	use_crosshair_radius = read_hui_setting_bool("use_crosshair_radius", false)
 end
+local crosshair_select_mode = mcm_get("hui/crosshair_select_mode") or read_hui_setting_number("crosshair_select_mode", 1)
 local crosshair_radius_px = mcm_get("hui/crosshair_radius_px") or read_hui_setting_number("crosshair_radius_px", 35)
+local crosshair_radius_m = mcm_get("hui/crosshair_radius_m") or read_hui_setting_number("crosshair_radius_m", 2)
 local crosshair_only_best = mcm_get("hui/crosshair_only_best")
 if crosshair_only_best == nil then
 	crosshair_only_best = read_hui_setting_bool("crosshair_only_best", true)
@@ -787,8 +793,20 @@ local function hui_is_target_allowed(npc)
 		return nil
 	end
 
-	if require_los and not db.actor:see(npc) then
-		return nil
+	if require_los then
+		if level and level.check_object then
+			local vis = hui_level_check_object(npc)
+			if vis == false then
+				return nil
+			end
+			if vis == nil and not db.actor:see(npc) then
+				return nil
+			end
+		else
+			if not db.actor:see(npc) then
+				return nil
+			end
+		end
 	end
 
 	return dist
@@ -851,6 +869,207 @@ local function hui_pick_targets_in_crosshair()
 				block_dist = n
 			end
 		end
+	end
+
+	local sel_mode = tonumber(crosshair_select_mode) or 1
+	if sel_mode < 1 then
+		sel_mode = 1
+	elseif sel_mode > 2 then
+		sel_mode = 2
+	end
+
+	if sel_mode == 2 then
+		local actor = db and db.actor or nil
+		local actor_id = nil
+		if actor and actor.id then
+			local ok, v = pcall(function()
+				return actor:id()
+			end)
+			if ok and v ~= nil then
+				actor_id = v
+			end
+		end
+
+		local function get_obj_id(obj)
+			if not (obj and obj.id) then
+				return nil
+			end
+			local ok, v = pcall(function()
+				return obj:id()
+			end)
+			if ok then
+				return v
+			end
+			return nil
+		end
+
+		local function base_ok(npc)
+			if actor_id and get_obj_id(npc) == actor_id then
+				return nil
+			end
+			if (npc:clsid() == clsid.crow) then
+				return nil
+			end
+			if not (IsStalker(npc) or IsMonster(npc)) then
+				return nil
+			end
+			if not npc:alive() then
+				return nil
+			end
+			if IsStalker(npc) and show_mode == 1 and npc:relation(db.actor) < game_object.enemy then
+				return nil
+			end
+			local dist = math.sqrt(npc:position():distance_to_sqr(db.actor:position()))
+			if dist > hui_range then
+				return nil
+			end
+			return dist
+		end
+
+		local radius_m = tonumber(crosshair_radius_m) or 0
+		if radius_m <= 0 then
+			local direct = level.get_target_obj and level.get_target_obj() or nil
+			if direct then
+				if actor_id and get_obj_id(direct) == actor_id then
+					return out
+				end
+				local dist = base_ok(direct)
+				if dist and (not block_dist or dist <= (block_dist + 0.5)) then
+				local ok, id = pcall(function()
+					return direct:id()
+				end)
+				if ok and id then
+					out[id] = true
+				end
+				end
+			end
+			return out
+		end
+
+		local dev = hui_get_device_obj()
+		if not (dev and dev.cam_pos and dev.cam_dir) then
+			return out
+		end
+
+		local origin = dev.cam_pos
+		local dir_n = vector():set(dev.cam_dir)
+		local dir_len2 = dir_n:dotproduct(dir_n)
+		if not dir_len2 or dir_len2 <= 0 then
+			return out
+		end
+		dir_n:mul(1 / math.sqrt(dir_len2))
+
+		local r2 = radius_m * radius_m
+		local best_id = nil
+		local best_d2 = nil
+		local best_t = nil
+
+		local v_to = vector()
+		local v_closest = vector()
+
+		local function get_obj_anchor_pos(obj)
+			if hui_anchor_mode == 2 then
+				return utils_obj.safe_bone_pos(obj, "bip01_neck") or obj:position()
+			elseif hui_anchor_mode == 3 then
+				return utils_obj.safe_bone_pos(obj, "bip01_spine") or obj:position()
+			elseif hui_anchor_mode == 4 then
+				return obj:position()
+			end
+			return utils_obj.safe_bone_pos(obj, "bip01_head") or obj:position()
+		end
+
+		local function consider_world(obj)
+			if require_los then
+				if level and level.check_object then
+					local vis = hui_level_check_object(obj)
+					if vis == false then
+						return
+					end
+				else
+					if not db.actor:see(obj) then
+						return
+					end
+				end
+			end
+
+			local bone = get_obj_anchor_pos(obj)
+			if not bone then
+				return
+			end
+
+			v_to:set(bone)
+			v_to:sub(origin)
+			local t = v_to:dotproduct(dir_n)
+			if t < 0 then
+				return
+			end
+			if t > hui_range then
+				return
+			end
+
+			v_closest:mad(origin, dir_n, t)
+			local d2 = bone:distance_to_sqr(v_closest)
+			if d2 > r2 then
+				return
+			end
+
+			local ok, id = pcall(function()
+				return obj:id()
+			end)
+			if not (ok and id) then
+				return
+			end
+
+			if crosshair_only_best then
+				if best_d2 == nil or d2 < best_d2 or (d2 == best_d2 and (best_t == nil or t < best_t)) then
+					best_d2 = d2
+					best_t = t
+					best_id = id
+				end
+			else
+				out[id] = true
+			end
+		end
+
+		local direct = level.get_target_obj and level.get_target_obj() or nil
+		if direct then
+			if actor_id and get_obj_id(direct) == actor_id then
+				direct = nil
+			end
+		end
+		if direct then
+			local dist = base_ok(direct)
+			if dist and (not block_dist or dist <= (block_dist + 0.5)) then
+			consider_world(direct)
+			end
+		end
+
+		if level.iterate_nearest then
+			local actor_pos = db.actor:position()
+			pcall(level.iterate_nearest, actor_pos, hui_range, function(obj)
+				if not obj then
+					return false
+				end
+				if actor_id and get_obj_id(obj) == actor_id then
+					return false
+				end
+				local dist = base_ok(obj)
+				if not dist then
+					return false
+				end
+				if block_dist and dist > (block_dist + 0.5) then
+					return false
+				end
+				consider_world(obj)
+				return false
+			end)
+		end
+
+		if crosshair_only_best and best_id ~= nil then
+			out[best_id] = true
+		end
+
+		return out
 	end
 
 	local radius = tonumber(crosshair_radius_px) or 0
@@ -1066,18 +1285,6 @@ function hui_ui:Update(delta)
 				hui_apply_style(self.ele[id], dyn_s, target_dist, target_relation, target_community)
 				self.ele[id].marker:SetWndPos(vec)
 				self.ele[id].marker_zoom:SetWndPos(vec)
-				self.ele[id].hp_shadow:Show(true)
-				self.ele[id].hp_shadow_zoom:Show(true)
-				self.ele[id].hp_bg:Show(true)
-				self.ele[id].hp_bg_zoom:Show(true)
-				self.ele[id].hp:Show(true)
-				self.ele[id].hp_zoom:Show(true)
-				if self.ele[id].hp_shadow.SetTextureColor then
-					self.ele[id].hp_shadow:SetTextureColor(GetARGB(160, 0, 0, 0))
-				end
-				if self.ele[id].hp_shadow_zoom.SetTextureColor then
-					self.ele[id].hp_shadow_zoom:SetTextureColor(GetARGB(160, 0, 0, 0))
-				end
 				local hp = nil
 				if st.object.health ~= nil then
 					if type(st.object.health) == "function" then
@@ -1094,15 +1301,30 @@ function hui_ui:Update(delta)
 				elseif hp > 1 then
 					hp = 1
 				end
-				local hp_w = self.ele[id].hp_w or HP_BAR_W
-				local hp_h = self.ele[id].hp_h or 5
-				local fill_w = math.floor((hp_w * hp) + 0.5)
-				self.ele[id].hp_shadow:SetWndSize(vector2():set(hp_w, hp_h))
-				self.ele[id].hp_shadow_zoom:SetWndSize(vector2():set(hp_w, hp_h))
-				self.ele[id].hp_bg:SetWndSize(vector2():set(hp_w, hp_h))
-				self.ele[id].hp_bg_zoom:SetWndSize(vector2():set(hp_w, hp_h))
-				self.ele[id].hp:SetWndSize(vector2():set(fill_w, hp_h))
-				self.ele[id].hp_zoom:SetWndSize(vector2():set(fill_w, hp_h))
+				local hide_full = hide_hp_full and hp >= 0.999
+				self.ele[id].hp_shadow:Show(not hide_full)
+				self.ele[id].hp_shadow_zoom:Show(not hide_full)
+				self.ele[id].hp_bg:Show(not hide_full)
+				self.ele[id].hp_bg_zoom:Show(not hide_full)
+				self.ele[id].hp:Show(not hide_full)
+				self.ele[id].hp_zoom:Show(not hide_full)
+				if not hide_full then
+					if self.ele[id].hp_shadow.SetTextureColor then
+						self.ele[id].hp_shadow:SetTextureColor(GetARGB(160, 0, 0, 0))
+					end
+					if self.ele[id].hp_shadow_zoom.SetTextureColor then
+						self.ele[id].hp_shadow_zoom:SetTextureColor(GetARGB(160, 0, 0, 0))
+					end
+					local hp_w = self.ele[id].hp_w or HP_BAR_W
+					local hp_h = self.ele[id].hp_h or 5
+					local fill_w = math.floor((hp_w * hp) + 0.5)
+					self.ele[id].hp_shadow:SetWndSize(vector2():set(hp_w, hp_h))
+					self.ele[id].hp_shadow_zoom:SetWndSize(vector2():set(hp_w, hp_h))
+					self.ele[id].hp_bg:SetWndSize(vector2():set(hp_w, hp_h))
+					self.ele[id].hp_bg_zoom:SetWndSize(vector2():set(hp_w, hp_h))
+					self.ele[id].hp:SetWndSize(vector2():set(fill_w, hp_h))
+					self.ele[id].hp_zoom:SetWndSize(vector2():set(fill_w, hp_h))
+				end
 
 				if show_distance then
 					self.ele[id].text1_sh:Show(true)
@@ -1393,6 +1615,10 @@ local function on_option_change()
 	HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 50)
 	HP_BAR_OFFSET_X = mcm_get("hui/hp_bar_offset_x") or read_hui_setting_number("hp_bar_offset_x", 0)
 	HP_BAR_OFFSET_Y = mcm_get("hui/hp_bar_offset_y") or read_hui_setting_number("hp_bar_offset_y", 0)
+	hide_hp_full = mcm_get("hui/hide_hp_full")
+	if hide_hp_full == nil then
+		hide_hp_full = read_hui_setting_bool("hide_hp_full", true)
+	end
 	show_distance = mcm_get("hui/show_distance")
 	if show_distance == nil then
 		show_distance = read_hui_setting_bool("show_distance", true)
@@ -1414,7 +1640,9 @@ local function on_option_change()
 	if use_crosshair_radius == nil then
 		use_crosshair_radius = read_hui_setting_bool("use_crosshair_radius", false)
 	end
+	crosshair_select_mode = mcm_get("hui/crosshair_select_mode") or read_hui_setting_number("crosshair_select_mode", 1)
 	crosshair_radius_px = mcm_get("hui/crosshair_radius_px") or read_hui_setting_number("crosshair_radius_px", 35)
+	crosshair_radius_m = mcm_get("hui/crosshair_radius_m") or read_hui_setting_number("crosshair_radius_m", 2)
 	crosshair_only_best = mcm_get("hui/crosshair_only_best")
 	if crosshair_only_best == nil then
 		crosshair_only_best = read_hui_setting_bool("crosshair_only_best", true)

@@ -74,6 +74,24 @@
 	<string id="ui_mcm_hui_crosshair_radius_px_desc">
 		<text>Radius in pixels around the screen center</text>
 	</string>
+	<string id="ui_mcm_hui_crosshair_select_mode">
+		<text>Crosshair selection</text>
+	</string>
+	<string id="ui_mcm_hui_crosshair_select_mode_desc">
+		<text>How targets are selected around the crosshair</text>
+	</string>
+	<string id="ui_mcm_hui_crosshair_mode_screen">
+		<text>Screen radius (px)</text>
+	</string>
+	<string id="ui_mcm_hui_crosshair_mode_world">
+		<text>World radius (m)</text>
+	</string>
+	<string id="ui_mcm_hui_crosshair_radius_m">
+		<text>Crosshair radius (m)</text>
+	</string>
+	<string id="ui_mcm_hui_crosshair_radius_m_desc">
+		<text>Max distance from target head to camera ray</text>
+	</string>
 	<string id="ui_mcm_hui_crosshair_only_best">
 		<text>Only nearest to crosshair</text>
 	</string>
@@ -154,5 +172,11 @@
 	</string>
 	<string id="ui_mcm_hui_hp_bar_offset_y_desc">
 		<text>Move the HP bar up/down (in marker pixels)</text>
+	</string>
+	<string id="ui_mcm_hui_hide_hp_full">
+		<text>Hide HP bar when full</text>
+	</string>
+	<string id="ui_mcm_hui_hide_hp_full_desc">
+		<text>Hide the HP bar if health is at 100%</text>
 	</string>
 </string_table>
