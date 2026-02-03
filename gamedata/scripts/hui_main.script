@@ -184,11 +184,22 @@ local function hui_normalize_anchor_mode(v)
 	return math.floor(v)
 end
 
+local function hui_normalize_lerp_factor(v)
+	v = tonumber(v) or 0.3
+	if v < 0.01 then
+		v = 0.01
+	elseif v > 1 then
+		v = 1
+	end
+	return v
+end
+
 local hui_jitter_mode = hui_normalize_jitter_mode(mcm_get("hui/jitter_mode") or read_hui_setting_number("jitter_mode", 0))
 local hui_jitter_deadzone_px = hui_normalize_deadzone_px(mcm_get("hui/jitter_deadzone_px") or read_hui_setting_number("jitter_deadzone_px", 2))
 local hui_jitter_tau_ms = hui_normalize_tau_ms(mcm_get("hui/jitter_tau_ms") or read_hui_setting_number("jitter_tau_ms", 120))
 local hui_jitter_max_step_px = hui_normalize_max_step_px(mcm_get("hui/jitter_max_step_px") or read_hui_setting_number("jitter_max_step_px", 0))
 local hui_anchor_mode = hui_normalize_anchor_mode(mcm_get("hui/anchor_mode") or read_hui_setting_number("anchor_mode", 1))
+local hui_lerp_factor = hui_normalize_lerp_factor(mcm_get("hui/lerp_factor") or read_hui_setting_number("lerp_factor", 0.3))
 local hui_last_pick_ms = nil
 local hui_last_ui_ms = nil
 local hui_pick_accum_ms = 0
@@ -1898,6 +1909,22 @@ function hui_ui:GetScreenCoordinates(obj, dist, ele, delta)
 		end
 	end
 
+	if ele then
+		ele.target_px_x = mx
+		ele.target_px_y = my
+		if ele.cur_px_x == nil then
+			ele.cur_px_x = mx
+			ele.cur_px_y = my
+		else
+			local dx = mx - ele.cur_px_x
+			local dy = my - ele.cur_px_y
+			ele.cur_px_x = ele.cur_px_x + dx * hui_lerp_factor
+			ele.cur_px_y = ele.cur_px_y + dy * hui_lerp_factor
+		end
+		mx = ele.cur_px_x
+		my = ele.cur_px_y
+	end
+
 	mx = math.floor(mx + 0.5)
 	my = math.floor(my + 0.5)
 
@@ -1965,6 +1992,7 @@ local function on_option_change()
 	hui_jitter_tau_ms = hui_normalize_tau_ms(mcm_get("hui/jitter_tau_ms") or read_hui_setting_number("jitter_tau_ms", 120))
 	hui_jitter_max_step_px = hui_normalize_max_step_px(mcm_get("hui/jitter_max_step_px") or read_hui_setting_number("jitter_max_step_px", 0))
 	hui_anchor_mode = hui_normalize_anchor_mode(mcm_get("hui/anchor_mode") or read_hui_setting_number("anchor_mode", 1))
+	hui_lerp_factor = hui_normalize_lerp_factor(mcm_get("hui/lerp_factor") or read_hui_setting_number("lerp_factor", 0.3))
 	hui_last_pick_ms = nil
 	hui_last_ui_ms = nil
 	hui_pick_accum_ms = 0
