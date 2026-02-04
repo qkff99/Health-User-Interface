@@ -107,9 +107,9 @@ local require_los = mcm_get("hui/require_los")
 if require_los == nil then
 	require_los = read_hui_setting_bool("require_los", true)
 end
-local show_icon = mcm_get("hui/show_icon")
-if show_icon == nil then
-	show_icon = read_hui_setting_bool("show_icon", true)
+local show_faction = mcm_get("hui/show_faction")
+if show_faction == nil then
+	show_faction = read_hui_setting_bool("show_faction", true)
 end
 local use_crosshair_radius = mcm_get("hui/use_crosshair_radius")
 if use_crosshair_radius == nil then
@@ -1699,22 +1699,29 @@ function hui_ui:Update(delta)
 						self.ele[id].text2_sh_zoom:Show(true)
 						self.ele[id].text2:Show(true)
 						self.ele[id].text2_zoom:Show(true)
-						self.ele[id].text3_sh:Show(true)
-						self.ele[id].text3_sh_zoom:Show(true)
-						self.ele[id].text3:Show(true)
-						self.ele[id].text3_zoom:Show(true)
-						local faction_text = target_faction or ""
-						if faction_text ~= "" then
-							faction_text = "[" .. faction_text .. "]"
+						if show_faction then
+							self.ele[id].text3_sh:Show(true)
+							self.ele[id].text3_sh_zoom:Show(true)
+							self.ele[id].text3:Show(true)
+							self.ele[id].text3_zoom:Show(true)
+							local faction_text = target_faction or ""
+							if faction_text ~= "" then
+								faction_text = "[" .. faction_text .. "]"
+							end
+							self.ele[id].text3_sh:SetText(faction_text)
+							self.ele[id].text3_sh_zoom:SetText(faction_text)
+							self.ele[id].text3:SetText(faction_text)
+							self.ele[id].text3_zoom:SetText(faction_text)
+						else
+							self.ele[id].text3_sh:Show(false)
+							self.ele[id].text3_sh_zoom:Show(false)
+							self.ele[id].text3:Show(false)
+							self.ele[id].text3_zoom:Show(false)
 						end
 						self.ele[id].text2_sh:SetText(display_name)
 						self.ele[id].text2_sh_zoom:SetText(display_name)
 						self.ele[id].text2:SetText(display_name)
 						self.ele[id].text2_zoom:SetText(display_name)
-						self.ele[id].text3_sh:SetText(faction_text)
-						self.ele[id].text3_sh_zoom:SetText(faction_text)
-						self.ele[id].text3:SetText(faction_text)
-						self.ele[id].text3_zoom:SetText(faction_text)
 					end
 				else
 					self.ele[id].text2_sh:SetText("")
@@ -1997,9 +2004,9 @@ local function on_option_change()
 	if require_los == nil then
 		require_los = read_hui_setting_bool("require_los", true)
 	end
-	show_icon = mcm_get("hui/show_icon")
-	if show_icon == nil then
-		show_icon = read_hui_setting_bool("show_icon", true)
+	show_faction = mcm_get("hui/show_faction")
+	if show_faction == nil then
+		show_faction = read_hui_setting_bool("show_faction", true)
 	end
 	use_crosshair_radius = mcm_get("hui/use_crosshair_radius")
 	if use_crosshair_radius == nil then
