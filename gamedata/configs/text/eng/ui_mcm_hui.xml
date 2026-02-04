@@ -266,6 +266,12 @@
 	<string id="ui_mcm_hui_hp_bar_symbol_len_desc">
 		<text>How many symbols are shown at full HP (1-50).</text>
 	</string>
+	<string id="ui_mcm_hui_hp_bar_symbol_step_px">
+		<text>Symbol spacing (px)</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbol_step_px_desc">
+		<text>Distance between symbols in pixels (1-20).</text>
+	</string>
 	<string id="ui_mcm_hui_hide_hp_full">
 		<text>Hide HP bar when full</text>
 	</string>
