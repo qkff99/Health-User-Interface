@@ -86,6 +86,12 @@ local HP_BAR_MIN_W = mcm_get("hui/hp_bar_min_w") or read_hui_setting_number("hp_
 local HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 50)
 local HP_BAR_OFFSET_X = mcm_get("hui/hp_bar_offset_x") or read_hui_setting_number("hp_bar_offset_x", 0)
 local HP_BAR_OFFSET_Y = mcm_get("hui/hp_bar_offset_y") or read_hui_setting_number("hp_bar_offset_y", 0)
+local hp_bar_symbolic = mcm_get("hui/hp_bar_symbolic")
+if hp_bar_symbolic == nil then
+	hp_bar_symbolic = read_hui_setting_bool("hp_bar_symbolic", false)
+end
+local hp_bar_symbol_style = mcm_get("hui/hp_bar_symbol_style") or read_hui_setting_number("hp_bar_symbol_style", 1)
+local hp_bar_symbol_len = mcm_get("hui/hp_bar_symbol_len") or read_hui_setting_number("hp_bar_symbol_len", 128)
 local hide_hp_full = mcm_get("hui/hide_hp_full")
 if hide_hp_full == nil then
 	hide_hp_full = read_hui_setting_bool("hide_hp_full", true)
@@ -729,6 +735,50 @@ local function hui_get_hp_color(hp)
 	return math.floor(r + 0.5), math.floor(g + 0.5), 0
 end
 
+local hp_bar_symbol_cache = nil
+local hp_bar_symbol_cache_style = nil
+local hp_bar_symbol_cache_max = nil
+
+local function hui_get_hp_symbol_char(style)
+	if style == 2 then
+		return "I"
+	end
+	if style == 3 then
+		return "#"
+	end
+	return "|"
+end
+
+local function hui_get_hp_symbol_max()
+	local max = tonumber(hp_bar_symbol_len) or 10
+	if max < 1 then
+		max = 1
+	elseif max > 200 then
+		max = 200
+	end
+	return math.floor(max + 0.5)
+end
+
+local function hui_get_hp_symbol_cache()
+	local style = tonumber(hp_bar_symbol_style) or 1
+	local max = hui_get_hp_symbol_max()
+	if hp_bar_symbol_cache ~= nil and hp_bar_symbol_cache_style == style and hp_bar_symbol_cache_max == max then
+		return hp_bar_symbol_cache
+	end
+	hp_bar_symbol_cache_style = style
+	hp_bar_symbol_cache_max = max
+	local ch = hui_get_hp_symbol_char(style)
+	local arr = {}
+	local s = ""
+	arr[0] = s
+	for i = 1, max do
+		s = s .. ch
+		arr[i] = s
+	end
+	hp_bar_symbol_cache = { max = max, arr = arr, full = arr[max] }
+	return hp_bar_symbol_cache
+end
+
 local function hui_get_text_font()
 	if GetFontLetterica16Russian then
 		return GetFontLetterica16Russian()
@@ -839,6 +889,23 @@ local function hui_apply_layout(ele, s)
 	end
 	ele.hp:SetWndSize(vector2():set(hp_w, hp_h))
 	ele.hp_zoom:SetWndSize(vector2():set(hp_w, hp_h))
+
+	local hp_sym_h = 16
+	local hp_sym_y = hp_y - math.floor(((hp_sym_h - hp_h) * 0.5) + 0.5)
+	ele.hp_sym_h = hp_sym_h
+	ele.hp_sym_y = hp_sym_y
+	if ele.hp_sym and ele.hp_sym_zoom then
+		ele.hp_sym:SetWndPos(vector2():set(hp_x, hp_sym_y))
+		ele.hp_sym_zoom:SetWndPos(vector2():set(hp_x, hp_sym_y))
+		ele.hp_sym:SetWndSize(vector2():set(hp_w, hp_sym_h))
+		ele.hp_sym_zoom:SetWndSize(vector2():set(hp_w, hp_sym_h))
+	end
+	if ele.hp_sym_sh and ele.hp_sym_sh_zoom then
+		ele.hp_sym_sh:SetWndPos(vector2():set(hp_x + 1, hp_sym_y + 1))
+		ele.hp_sym_sh_zoom:SetWndPos(vector2():set(hp_x + 1, hp_sym_y + 1))
+		ele.hp_sym_sh:SetWndSize(vector2():set(hp_w, hp_sym_h))
+		ele.hp_sym_sh_zoom:SetWndSize(vector2():set(hp_w, hp_sym_h))
+	end
 end
 
 local function hui_get_name_rgb_by_relation(rel)
@@ -1559,6 +1626,10 @@ function hui_ui:Update(delta)
 				self.ele[id].hp_bg_zoom = self.xml:InitStatic("marker_zoom:hp_bg", self.ele[id].marker_zoom)
 				self.ele[id].hp = self.xml:InitStatic("marker:hp", self.ele[id].marker)
 				self.ele[id].hp_zoom = self.xml:InitStatic("marker_zoom:hp", self.ele[id].marker_zoom)
+				self.ele[id].hp_sym_sh = self.xml:InitTextWnd("marker:hp_sym_sh", self.ele[id].marker)
+				self.ele[id].hp_sym_sh_zoom = self.xml:InitTextWnd("marker_zoom:hp_sym_sh", self.ele[id].marker_zoom)
+				self.ele[id].hp_sym = self.xml:InitTextWnd("marker:hp_sym", self.ele[id].marker)
+				self.ele[id].hp_sym_zoom = self.xml:InitTextWnd("marker_zoom:hp_sym", self.ele[id].marker_zoom)
 				self.ele[id].text1_sh = self.xml:InitTextWnd("marker:st_dist_sh",self.ele[id].marker)
 				self.ele[id].text1_sh_zoom = self.xml:InitTextWnd("marker_zoom:st_dist_sh",self.ele[id].marker_zoom)
 				self.ele[id].text1 = self.xml:InitTextWnd("marker:st_dist",self.ele[id].marker)
@@ -1613,44 +1684,111 @@ function hui_ui:Update(delta)
 					hp = 1
 				end
 				local hide_full = hide_hp_full and hp >= 0.999
-				self.ele[id].hp_shadow:Show(not hide_full and not detect_timers[id])
-				self.ele[id].hp_shadow_zoom:Show(not hide_full and not detect_timers[id])
-				self.ele[id].hp_bg:Show(not hide_full and not detect_timers[id])
-				self.ele[id].hp_bg_zoom:Show(not hide_full and not detect_timers[id])
-				self.ele[id].hp:Show(not hide_full and not detect_timers[id])
-				self.ele[id].hp_zoom:Show(not hide_full and not detect_timers[id])
-				if not hide_full and not detect_timers[id] then
-					if self.ele[id].hp_shadow.SetTextureColor then
-						self.ele[id].hp_shadow:SetTextureColor(GetARGB(160, 0, 0, 0))
+				local hp_visible = not hide_full and not detect_timers[id]
+				if hp_bar_symbolic then
+					self.ele[id].hp_shadow:Show(false)
+					self.ele[id].hp_shadow_zoom:Show(false)
+					self.ele[id].hp_bg:Show(false)
+					self.ele[id].hp_bg_zoom:Show(false)
+					self.ele[id].hp:Show(false)
+					self.ele[id].hp_zoom:Show(false)
+					self.ele[id].hp_sym_sh:Show(hp_visible)
+					self.ele[id].hp_sym_sh_zoom:Show(hp_visible)
+					self.ele[id].hp_sym:Show(hp_visible)
+					self.ele[id].hp_sym_zoom:Show(hp_visible)
+					if hp_visible then
+						local cache = hui_get_hp_symbol_cache()
+						local max = cache.max or 10
+						local filled = math.floor((max * hp) + 0.5)
+						if filled < 0 then
+							filled = 0
+						elseif filled > max then
+							filled = max
+						end
+						local full = cache.full or ""
+						local fill = (cache.arr and cache.arr[filled]) or ""
+						self.ele[id].hp_sym_sh:SetText(full)
+						self.ele[id].hp_sym_sh_zoom:SetText(full)
+						self.ele[id].hp_sym:SetText(fill)
+						self.ele[id].hp_sym_zoom:SetText(fill)
+						if self.ele[id].hp_sym_sh.SetTextColor then
+							self.ele[id].hp_sym_sh:SetTextColor(GetARGB(160, 0, 0, 0))
+						end
+						if self.ele[id].hp_sym_sh_zoom.SetTextColor then
+							self.ele[id].hp_sym_sh_zoom:SetTextColor(GetARGB(160, 0, 0, 0))
+						end
+						local hp_r, hp_g, hp_b = hui_get_hp_color(hp)
+						if self.ele[id].hp_sym.SetTextColor then
+							self.ele[id].hp_sym:SetTextColor(GetARGB(255, hp_r, hp_g, hp_b))
+						end
+						if self.ele[id].hp_sym_zoom.SetTextColor then
+							self.ele[id].hp_sym_zoom:SetTextColor(GetARGB(255, hp_r, hp_g, hp_b))
+						end
+						local hp_w = self.ele[id].hp_w or HP_BAR_W
+						local hp_h = self.ele[id].hp_h or 5
+						local sym_h = self.ele[id].hp_sym_h or 16
+						local w = MARKER_W
+						local hp_x = (w - hp_w) * 0.5 + (HP_BAR_OFFSET_X * dyn_s)
+						local hp_y = 30 + (HP_BAR_OFFSET_Y * dyn_s)
+						local sym_y = hp_y - math.floor(((sym_h - hp_h) * 0.5) + 0.5)
+						self.ele[id].hp_sym:SetWndPos(vector2():set(hp_x, sym_y))
+						self.ele[id].hp_sym_zoom:SetWndPos(vector2():set(hp_x, sym_y))
+						self.ele[id].hp_sym_sh:SetWndPos(vector2():set(hp_x + 1, sym_y + 1))
+						self.ele[id].hp_sym_sh_zoom:SetWndPos(vector2():set(hp_x + 1, sym_y + 1))
+						self.ele[id].hp_sym_sh:SetWndSize(vector2():set(hp_w, sym_h))
+						self.ele[id].hp_sym_sh_zoom:SetWndSize(vector2():set(hp_w, sym_h))
+						self.ele[id].hp_sym:SetWndSize(vector2():set(hp_w, sym_h))
+						self.ele[id].hp_sym_zoom:SetWndSize(vector2():set(hp_w, sym_h))
+					else
+						self.ele[id].hp_sym_sh:SetText("")
+						self.ele[id].hp_sym_sh_zoom:SetText("")
+						self.ele[id].hp_sym:SetText("")
+						self.ele[id].hp_sym_zoom:SetText("")
 					end
-					if self.ele[id].hp_shadow_zoom.SetTextureColor then
-						self.ele[id].hp_shadow_zoom:SetTextureColor(GetARGB(160, 0, 0, 0))
+				else
+					self.ele[id].hp_sym_sh:Show(false)
+					self.ele[id].hp_sym_sh_zoom:Show(false)
+					self.ele[id].hp_sym:Show(false)
+					self.ele[id].hp_sym_zoom:Show(false)
+					self.ele[id].hp_shadow:Show(hp_visible)
+					self.ele[id].hp_shadow_zoom:Show(hp_visible)
+					self.ele[id].hp_bg:Show(hp_visible)
+					self.ele[id].hp_bg_zoom:Show(hp_visible)
+					self.ele[id].hp:Show(hp_visible)
+					self.ele[id].hp_zoom:Show(hp_visible)
+					if hp_visible then
+						if self.ele[id].hp_shadow.SetTextureColor then
+							self.ele[id].hp_shadow:SetTextureColor(GetARGB(160, 0, 0, 0))
+						end
+						if self.ele[id].hp_shadow_zoom.SetTextureColor then
+							self.ele[id].hp_shadow_zoom:SetTextureColor(GetARGB(160, 0, 0, 0))
+						end
+						local hp_r, hp_g, hp_b = hui_get_hp_color(hp)
+						if self.ele[id].hp.SetTextureColor then
+							self.ele[id].hp:SetTextureColor(GetARGB(255, hp_r, hp_g, hp_b))
+						end
+						if self.ele[id].hp_zoom.SetTextureColor then
+							self.ele[id].hp_zoom:SetTextureColor(GetARGB(255, hp_r, hp_g, hp_b))
+						end
+						local hp_w = self.ele[id].hp_w or HP_BAR_W
+						local hp_h = self.ele[id].hp_h or 5
+						local fill_w = math.floor((hp_w * hp) + 0.5)
+						local w = MARKER_W
+						local hp_x = (w - hp_w) * 0.5 + (HP_BAR_OFFSET_X * dyn_s)
+						local hp_y = 30 + (HP_BAR_OFFSET_Y * dyn_s)
+						self.ele[id].hp:SetWndPos(vector2():set(hp_x, hp_y))
+						self.ele[id].hp_zoom:SetWndPos(vector2():set(hp_x, hp_y))
+						self.ele[id].hp_bg:SetWndPos(vector2():set(hp_x, hp_y))
+						self.ele[id].hp_bg_zoom:SetWndPos(vector2():set(hp_x, hp_y))
+						self.ele[id].hp_shadow:SetWndPos(vector2():set(hp_x + 1, hp_y + 1))
+						self.ele[id].hp_shadow_zoom:SetWndPos(vector2():set(hp_x + 1, hp_y + 1))
+						self.ele[id].hp_shadow:SetWndSize(vector2():set(hp_w, hp_h))
+						self.ele[id].hp_shadow_zoom:SetWndSize(vector2():set(hp_w, hp_h))
+						self.ele[id].hp_bg:SetWndSize(vector2():set(hp_w, hp_h))
+						self.ele[id].hp_bg_zoom:SetWndSize(vector2():set(hp_w, hp_h))
+						self.ele[id].hp:SetWndSize(vector2():set(fill_w, hp_h))
+						self.ele[id].hp_zoom:SetWndSize(vector2():set(fill_w, hp_h))
 					end
-					local hp_r, hp_g, hp_b = hui_get_hp_color(hp)
-					if self.ele[id].hp.SetTextureColor then
-						self.ele[id].hp:SetTextureColor(GetARGB(255, hp_r, hp_g, hp_b))
-					end
-					if self.ele[id].hp_zoom.SetTextureColor then
-						self.ele[id].hp_zoom:SetTextureColor(GetARGB(255, hp_r, hp_g, hp_b))
-					end
-					local hp_w = self.ele[id].hp_w or HP_BAR_W
-					local hp_h = self.ele[id].hp_h or 5
-					local fill_w = math.floor((hp_w * hp) + 0.5)
-					local w = MARKER_W
-					local hp_x = (w - hp_w) * 0.5 + (HP_BAR_OFFSET_X * dyn_s)
-					local hp_y = 30 + (HP_BAR_OFFSET_Y * dyn_s)
-					self.ele[id].hp:SetWndPos(vector2():set(hp_x, hp_y))
-					self.ele[id].hp_zoom:SetWndPos(vector2():set(hp_x, hp_y))
-					self.ele[id].hp_bg:SetWndPos(vector2():set(hp_x, hp_y))
-					self.ele[id].hp_bg_zoom:SetWndPos(vector2():set(hp_x, hp_y))
-					self.ele[id].hp_shadow:SetWndPos(vector2():set(hp_x + 1, hp_y + 1))
-					self.ele[id].hp_shadow_zoom:SetWndPos(vector2():set(hp_x + 1, hp_y + 1))
-					self.ele[id].hp_shadow:SetWndSize(vector2():set(hp_w, hp_h))
-					self.ele[id].hp_shadow_zoom:SetWndSize(vector2():set(hp_w, hp_h))
-					self.ele[id].hp_bg:SetWndSize(vector2():set(hp_w, hp_h))
-					self.ele[id].hp_bg_zoom:SetWndSize(vector2():set(hp_w, hp_h))
-					self.ele[id].hp:SetWndSize(vector2():set(fill_w, hp_h))
-					self.ele[id].hp_zoom:SetWndSize(vector2():set(fill_w, hp_h))
 				end
 
 				if show_distance and not detect_timers[id] then
@@ -1787,6 +1925,14 @@ function hui_ui:Update(delta)
 				self.ele[id].hp_bg_zoom:Show(false)
 				self.ele[id].hp_shadow:Show(false)
 				self.ele[id].hp_shadow_zoom:Show(false)
+				self.ele[id].hp_sym:SetText("")
+				self.ele[id].hp_sym_zoom:SetText("")
+				self.ele[id].hp_sym_sh:SetText("")
+				self.ele[id].hp_sym_sh_zoom:SetText("")
+				self.ele[id].hp_sym:Show(false)
+				self.ele[id].hp_sym_zoom:Show(false)
+				self.ele[id].hp_sym_sh:Show(false)
+				self.ele[id].hp_sym_sh_zoom:Show(false)
 				self.ele[id].marker:Show(false)
 				self.ele[id].marker_zoom:Show(false)
 			end
@@ -1827,6 +1973,14 @@ function hui_ui:Update(delta)
 			self.ele[id].hp_bg_zoom:Show(false)
 			self.ele[id].hp_shadow:Show(false)
 			self.ele[id].hp_shadow_zoom:Show(false)
+			self.ele[id].hp_sym:SetText("")
+			self.ele[id].hp_sym_zoom:SetText("")
+			self.ele[id].hp_sym_sh:SetText("")
+			self.ele[id].hp_sym_sh_zoom:SetText("")
+			self.ele[id].hp_sym:Show(false)
+			self.ele[id].hp_sym_zoom:Show(false)
+			self.ele[id].hp_sym_sh:Show(false)
+			self.ele[id].hp_sym_sh_zoom:Show(false)
 			self.ele[id].marker:Show(false)
 			self.ele[id].marker_zoom:Show(false)
 			self.ele[id] = nil
@@ -1987,6 +2141,12 @@ local function on_option_change()
 	HP_BAR_MAX_W = mcm_get("hui/hp_bar_max_w") or read_hui_setting_number("hp_bar_max_w", 50)
 	HP_BAR_OFFSET_X = mcm_get("hui/hp_bar_offset_x") or read_hui_setting_number("hp_bar_offset_x", 0)
 	HP_BAR_OFFSET_Y = mcm_get("hui/hp_bar_offset_y") or read_hui_setting_number("hp_bar_offset_y", 0)
+	hp_bar_symbolic = mcm_get("hui/hp_bar_symbolic")
+	if hp_bar_symbolic == nil then
+		hp_bar_symbolic = read_hui_setting_bool("hp_bar_symbolic", false)
+	end
+	hp_bar_symbol_style = mcm_get("hui/hp_bar_symbol_style") or read_hui_setting_number("hp_bar_symbol_style", 1)
+	hp_bar_symbol_len = mcm_get("hui/hp_bar_symbol_len") or read_hui_setting_number("hp_bar_symbol_len", 128)
 	hide_hp_full = mcm_get("hui/hide_hp_full")
 	if hide_hp_full == nil then
 		hide_hp_full = read_hui_setting_bool("hide_hp_full", true)

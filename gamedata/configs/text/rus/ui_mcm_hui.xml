@@ -9,261 +9,288 @@
 		<text>H.U.I.</text>
 	</string>
     <string id="ui_mcm_hui_range">
-		<text>Максимальная дистанция (м)</text>
+		<text>РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґРёСЃС‚Р°РЅС†РёСЏ (Рј)</text>
 	</string>
     <string id="ui_mcm_hui_range_desc">
-		<text>Дистанция в метрах для появления маркера</text>
+		<text>Р”РёСЃС‚Р°РЅС†РёСЏ РІ РјРµС‚СЂР°С… РґР»СЏ РїРѕСЏРІР»РµРЅРёСЏ РјР°СЂРєРµСЂР°</text>
 	</string>
     <string id="ui_mcm_hui_show_mode">
-		<text>Фильтр целей</text>
+		<text>Р¤РёР»СЊС‚СЂ С†РµР»РµР№</text>
 	</string>
     <string id="ui_mcm_hui_show_mode_desc">
-		<text>Какие цели могут показывать интерфейс</text>
+		<text>РљР°РєРёРµ С†РµР»Рё РјРѕРіСѓС‚ РїРѕРєР°Р·С‹РІР°С‚СЊ РёРЅС‚РµСЂС„РµР№СЃ</text>
 	</string>
     <string id="hui_show_mode_lst_ui_mcm_hui_show_mode_enemy">
-		<text>Только враги</text>
+		<text>РўРѕР»СЊРєРѕ РІСЂР°РіРё</text>
 	</string>
     <string id="hui_show_mode_lst_ui_mcm_hui_show_mode_any">
-		<text>Любая цель</text>
+		<text>Р›СЋР±Р°СЏ С†РµР»СЊ</text>
 	</string>
     <string id="ui_mcm_hui_require_los">
-		<text>Требовать прямую видимость</text>
+		<text>РўСЂРµР±РѕРІР°С‚СЊ РїСЂСЏРјСѓСЋ РІРёРґРёРјРѕСЃС‚СЊ</text>
 	</string>
     <string id="ui_mcm_hui_require_los_desc">
-		<text>Показывать интерфейс только если актёр видит цель</text>
+		<text>РџРѕРєР°Р·С‹РІР°С‚СЊ РёРЅС‚РµСЂС„РµР№СЃ С‚РѕР»СЊРєРѕ РµСЃР»Рё Р°РєС‚С‘СЂ РІРёРґРёС‚ С†РµР»СЊ</text>
 	</string>
     <string id="ui_mcm_hui_show_faction">
-		<text>Показывать фракцию</text>
+		<text>РџРѕРєР°Р·С‹РІР°С‚СЊ С„СЂР°РєС†РёСЋ</text>
 	</string>
 	<string id="ui_mcm_hui_show_faction_desc">
-		<text>Показывать иконку фракции на маркере</text>
+		<text>РџРѕРєР°Р·С‹РІР°С‚СЊ РёРєРѕРЅРєСѓ С„СЂР°РєС†РёРё РЅР° РјР°СЂРєРµСЂРµ</text>
 	</string>
 	<string id="ui_mcm_hui_show_distance">
-		<text>Показывать дистанцию</text>
+		<text>РџРѕРєР°Р·С‹РІР°С‚СЊ РґРёСЃС‚Р°РЅС†РёСЋ</text>
 	</string>		
     <string id="ui_mcm_hui_show_distance_desc">
-		<text>Показывать дистанцию на маркере</text>
+		<text>РџРѕРєР°Р·С‹РІР°С‚СЊ РґРёСЃС‚Р°РЅС†РёСЋ РЅР° РјР°СЂРєРµСЂРµ</text>
 	</string>	
     <string id="ui_mcm_hui_show_name">
-		<text>Показывать имя</text>
+		<text>РџРѕРєР°Р·С‹РІР°С‚СЊ РёРјСЏ</text>
 	</string>		
 	<string id="ui_mcm_hui_show_name_desc">
-		<text>Показывать имя цели на маркере</text>
+		<text>РџРѕРєР°Р·С‹РІР°С‚СЊ РёРјСЏ С†РµР»Рё РЅР° РјР°СЂРєРµСЂРµ</text>
 	</string>
     <string id="ui_mcm_hui_update_ms">
-		<text>Задержка обновления UI (мс)</text>
+		<text>Р—Р°РґРµСЂР¶РєР° РѕР±РЅРѕРІР»РµРЅРёСЏ UI (РјСЃ)</text>
 	</string>
     <string id="ui_mcm_hui_update_ms_desc">
-		<text>Как часто обновляется маркер. 0 = каждый кадр</text>
+		<text>РљР°Рє С‡Р°СЃС‚Рѕ РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ РјР°СЂРєРµСЂ. 0 = РєР°Р¶РґС‹Р№ РєР°РґСЂ</text>
 	</string>
     <string id="ui_mcm_hui_use_crosshair_radius">
-		<text>Режим радиуса прицела</text>
+		<text>Р РµР¶РёРј СЂР°РґРёСѓСЃР° РїСЂРёС†РµР»Р°</text>
 	</string>
     <string id="ui_mcm_hui_use_crosshair_radius_desc">
-		<text>Когда включено, показывать цели в радиусе вокруг прицела</text>
+		<text>РљРѕРіРґР° РІРєР»СЋС‡РµРЅРѕ, РїРѕРєР°Р·С‹РІР°С‚СЊ С†РµР»Рё РІ СЂР°РґРёСѓСЃРµ РІРѕРєСЂСѓРі РїСЂРёС†РµР»Р°</text>
 	</string>
     <string id="ui_mcm_hui_crosshair_radius_px">
-		<text>Радиус прицела (пикс)</text>
+		<text>Р Р°РґРёСѓСЃ РїСЂРёС†РµР»Р° (РїРёРєСЃ)</text>
 	</string>
     <string id="ui_mcm_hui_crosshair_radius_px_desc">
-		<text>Радиус в пикселях вокруг центра экрана</text>
+		<text>Р Р°РґРёСѓСЃ РІ РїРёРєСЃРµР»СЏС… РІРѕРєСЂСѓРі С†РµРЅС‚СЂР° СЌРєСЂР°РЅР°</text>
 	</string>
     <string id="ui_mcm_hui_crosshair_select_mode">
-		<text>Выбор прицела</text>
+		<text>Р’С‹Р±РѕСЂ РїСЂРёС†РµР»Р°</text>
 	</string>
     <string id="ui_mcm_hui_crosshair_select_mode_desc">
-		<text>Как выбираются цели вокруг прицела</text>
+		<text>РљР°Рє РІС‹Р±РёСЂР°СЋС‚СЃСЏ С†РµР»Рё РІРѕРєСЂСѓРі РїСЂРёС†РµР»Р°</text>
 	</string>
     <string id="hui_crosshair_select_mode_lst_ui_mcm_hui_crosshair_mode_screen">
-		<text>Радиус экрана (пикс)</text>
+		<text>Р Р°РґРёСѓСЃ СЌРєСЂР°РЅР° (РїРёРєСЃ)</text>
 	</string>
     <string id="hui_crosshair_select_mode_lst_ui_mcm_hui_crosshair_mode_world">
-		<text>Радиус мира (м)</text>
+		<text>Р Р°РґРёСѓСЃ РјРёСЂР° (Рј)</text>
 	</string>
     <string id="ui_mcm_hui_crosshair_radius_m">
-		<text>Радиус прицела (м)</text>
+		<text>Р Р°РґРёСѓСЃ РїСЂРёС†РµР»Р° (Рј)</text>
 	</string>
     <string id="ui_mcm_hui_crosshair_radius_m_desc">
-		<text>Максимальная дистанция от головы цели до луча камеры</text>
+		<text>РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґРёСЃС‚Р°РЅС†РёСЏ РѕС‚ РіРѕР»РѕРІС‹ С†РµР»Рё РґРѕ Р»СѓС‡Р° РєР°РјРµСЂС‹</text>
 	</string>
     <string id="ui_mcm_hui_crosshair_only_best">
-		<text>Только ближайший к прицелу</text>
+		<text>РўРѕР»СЊРєРѕ Р±Р»РёР¶Р°Р№С€РёР№ Рє РїСЂРёС†РµР»Сѓ</text>
 	</string>
     <string id="ui_mcm_hui_crosshair_only_best_desc">
-		<text>Если включено, показывать только одну цель ближайшую к центру прицела</text>
+		<text>Р•СЃР»Рё РІРєР»СЋС‡РµРЅРѕ, РїРѕРєР°Р·С‹РІР°С‚СЊ С‚РѕР»СЊРєРѕ РѕРґРЅСѓ С†РµР»СЊ Р±Р»РёР¶Р°Р№С€СѓСЋ Рє С†РµРЅС‚СЂСѓ РїСЂРёС†РµР»Р°</text>
 	</string>
     <string id="ui_mcm_hui_jitter_off">
-		<text>Анти-джиттер: Выкл</text>
+		<text>РђРЅС‚Рё-РґР¶РёС‚С‚РµСЂ: Р’С‹РєР»</text>
 	</string>
     <string id="ui_mcm_hui_jitter_mode">
-		<text>Режим анти-джиттера</text>
+		<text>Р РµР¶РёРј Р°РЅС‚Рё-РґР¶РёС‚С‚РµСЂР°</text>
 	</string>
     <string id="ui_mcm_hui_jitter_mode_desc">
-		<text>Метод сглаживания позиции маркера для уменьшения джиттера от анимаций костей.</text>
+		<text>РњРµС‚РѕРґ СЃРіР»Р°Р¶РёРІР°РЅРёСЏ РїРѕР·РёС†РёРё РјР°СЂРєРµСЂР° РґР»СЏ СѓРјРµРЅСЊС€РµРЅРёСЏ РґР¶РёС‚С‚РµСЂР° РѕС‚ Р°РЅРёРјР°С†РёР№ РєРѕСЃС‚РµР№.</text>
 	</string>
     <string id="hui_jitter_mode_lst_ui_mcm_hui_jitter_off">
-		<text>Анти-джиттер: Выкл</text>
+		<text>РђРЅС‚Рё-РґР¶РёС‚С‚РµСЂ: Р’С‹РєР»</text>
 	</string>
     <string id="hui_jitter_mode_lst_ui_mcm_hui_jitter_deadzone">
-		<text>Анти-джиттер: Мёртвая зона</text>
+		<text>РђРЅС‚Рё-РґР¶РёС‚С‚РµСЂ: РњС‘СЂС‚РІР°СЏ Р·РѕРЅР°</text>
 	</string>
     <string id="ui_mcm_hui_jitter_deadzone">
-		<text>Анти-джиттер: Мёртвая зона</text>
+		<text>РђРЅС‚Рё-РґР¶РёС‚С‚РµСЂ: РњС‘СЂС‚РІР°СЏ Р·РѕРЅР°</text>
 	</string>
     <string id="ui_mcm_hui_jitter_deadzone_desc">
-		<text>Минимальное изменение в пикселях для обновления позиции маркера (0-20пикс).</text>
+		<text>РњРёРЅРёРјР°Р»СЊРЅРѕРµ РёР·РјРµРЅРµРЅРёРµ РІ РїРёРєСЃРµР»СЏС… РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РїРѕР·РёС†РёРё РјР°СЂРєРµСЂР° (0-20РїРёРєСЃ).</text>
 	</string>
     <string id="hui_jitter_mode_lst_ui_mcm_hui_jitter_ema2d">
-		<text>Анти-джиттер: Плавный (2D)</text>
+		<text>РђРЅС‚Рё-РґР¶РёС‚С‚РµСЂ: РџР»Р°РІРЅС‹Р№ (2D)</text>
 	</string>
     <string id="ui_mcm_hui_jitter_ema2d">
-		<text>Анти-джиттер: Плавный (2D)</text>
+		<text>РђРЅС‚Рё-РґР¶РёС‚С‚РµСЂ: РџР»Р°РІРЅС‹Р№ (2D)</text>
 	</string>
     <string id="ui_mcm_hui_jitter_ema2d_desc">
-		<text>Сглаживает движение маркера на экране используя экспоненциальное скользящее среднее.</text>
+		<text>РЎРіР»Р°Р¶РёРІР°РµС‚ РґРІРёР¶РµРЅРёРµ РјР°СЂРєРµСЂР° РЅР° СЌРєСЂР°РЅРµ РёСЃРїРѕР»СЊР·СѓСЏ СЌРєСЃРїРѕРЅРµРЅС†РёР°Р»СЊРЅРѕРµ СЃРєРѕР»СЊР·СЏС‰РµРµ СЃСЂРµРґРЅРµРµ.</text>
 	</string>
     <string id="hui_jitter_mode_lst_ui_mcm_hui_jitter_ema3d">
-		<text>Анти-джиттер: Плавный (3D)</text>
+		<text>РђРЅС‚Рё-РґР¶РёС‚С‚РµСЂ: РџР»Р°РІРЅС‹Р№ (3D)</text>
 	</string>
     <string id="ui_mcm_hui_jitter_ema3d">
-		<text>Анти-джиттер: Плавный (3D)</text>
+		<text>РђРЅС‚Рё-РґР¶РёС‚С‚РµСЂ: РџР»Р°РІРЅС‹Р№ (3D)</text>
 	</string>
     <string id="ui_mcm_hui_jitter_ema3d_desc">
-		<text>Сглаживает позицию цели в 3D пространстве перед проекцией на экран.</text>
+		<text>РЎРіР»Р°Р¶РёРІР°РµС‚ РїРѕР·РёС†РёСЋ С†РµР»Рё РІ 3D РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµ РїРµСЂРµРґ РїСЂРѕРµРєС†РёРµР№ РЅР° СЌРєСЂР°РЅ.</text>
 	</string>
     <string id="ui_mcm_hui_jitter_tau_ms">
-		<text>Константа времени сглаживания (мс)</text>
+		<text>РљРѕРЅСЃС‚Р°РЅС‚Р° РІСЂРµРјРµРЅРё СЃРіР»Р°Р¶РёРІР°РЅРёСЏ (РјСЃ)</text>
 	</string>
     <string id="ui_mcm_hui_jitter_tau_ms_desc">
-		<text>Константа времени для EMA сглаживания (меньше = быстрее реакция, больше джиттера).</text>
+		<text>РљРѕРЅСЃС‚Р°РЅС‚Р° РІСЂРµРјРµРЅРё РґР»СЏ EMA СЃРіР»Р°Р¶РёРІР°РЅРёСЏ (РјРµРЅСЊС€Рµ = Р±С‹СЃС‚СЂРµРµ СЂРµР°РєС†РёСЏ, Р±РѕР»СЊС€Рµ РґР¶РёС‚С‚РµСЂР°).</text>
 	</string>
     <string id="ui_mcm_hui_jitter_max_step_px">
-		<text>Макс. шаг за кадр (пикс)</text>
+		<text>РњР°РєСЃ. С€Р°Рі Р·Р° РєР°РґСЂ (РїРёРєСЃ)</text>
 	</string>
     <string id="ui_mcm_hui_jitter_max_step_px_desc">
-		<text>Максимальное количество пикселей которые маркер может пройти за кадр (0 = без ограничений).</text>
+		<text>РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РїРёРєСЃРµР»РµР№ РєРѕС‚РѕСЂС‹Рµ РјР°СЂРєРµСЂ РјРѕР¶РµС‚ РїСЂРѕР№С‚Рё Р·Р° РєР°РґСЂ (0 = Р±РµР· РѕРіСЂР°РЅРёС‡РµРЅРёР№).</text>
 	</string>
     <string id="ui_mcm_hui_lerp_factor">
-		<text>Скорость интерполяции</text>
+		<text>РЎРєРѕСЂРѕСЃС‚СЊ РёРЅС‚РµСЂРїРѕР»СЏС†РёРё</text>
 	</string>
     <string id="ui_mcm_hui_lerp_factor_desc">
-		<text>Скорость интерполяции UI к целевой позиции за кадр (0.01-1.0, меньше = плавнее).</text>
+		<text>РЎРєРѕСЂРѕСЃС‚СЊ РёРЅС‚РµСЂРїРѕР»СЏС†РёРё UI Рє С†РµР»РµРІРѕР№ РїРѕР·РёС†РёРё Р·Р° РєР°РґСЂ (0.01-1.0, РјРµРЅСЊС€Рµ = РїР»Р°РІРЅРµРµ).</text>
 	</string>
     <string id="ui_mcm_hui_jitter_deadzone_px">
-		<text>Мёртвая зона (пикс)</text>
+		<text>РњС‘СЂС‚РІР°СЏ Р·РѕРЅР° (РїРёРєСЃ)</text>
 	</string>
     <string id="ui_mcm_hui_jitter_deadzone_px_desc">
-		<text>Порог изменения пикселей для режима deadzone (0-20пикс).</text>
+		<text>РџРѕСЂРѕРі РёР·РјРµРЅРµРЅРёСЏ РїРёРєСЃРµР»РµР№ РґР»СЏ СЂРµР¶РёРјР° deadzone (0-20РїРёРєСЃ).</text>
 	</string>
     <string id="ui_mcm_hui_anchor_mode">
-		<text>Режим привязки</text>
+		<text>Р РµР¶РёРј РїСЂРёРІСЏР·РєРё</text>
 	</string>
     <string id="ui_mcm_hui_anchor_mode_desc">
-		<text>Точка привязки на модели NPC для позиции маркера.</text>
+		<text>РўРѕС‡РєР° РїСЂРёРІСЏР·РєРё РЅР° РјРѕРґРµР»Рё NPC РґР»СЏ РїРѕР·РёС†РёРё РјР°СЂРєРµСЂР°.</text>
 	</string>
     <string id="hui_anchor_mode_lst_ui_mcm_hui_anchor_head">
-		<text>Привязка: Голова</text>
+		<text>РџСЂРёРІСЏР·РєР°: Р“РѕР»РѕРІР°</text>
 	</string>
     <string id="ui_mcm_hui_anchor_head">
-		<text>Привязка: Голова</text>
+		<text>РџСЂРёРІСЏР·РєР°: Р“РѕР»РѕРІР°</text>
 	</string>
     <string id="hui_anchor_mode_lst_ui_mcm_hui_anchor_neck">
-		<text>Привязка: Шея</text>
+		<text>РџСЂРёРІСЏР·РєР°: РЁРµСЏ</text>
 	</string>
     <string id="ui_mcm_hui_anchor_neck">
-		<text>Привязка: Шея</text>
+		<text>РџСЂРёРІСЏР·РєР°: РЁРµСЏ</text>
 	</string>
     <string id="hui_anchor_mode_lst_ui_mcm_hui_anchor_spine">
-		<text>Привязка: Спина</text>
+		<text>РџСЂРёРІСЏР·РєР°: РЎРїРёРЅР°</text>
 	</string>
     <string id="ui_mcm_hui_anchor_spine">
-		<text>Привязка: Спина</text>
+		<text>РџСЂРёРІСЏР·РєР°: РЎРїРёРЅР°</text>
 	</string>
     <string id="hui_anchor_mode_lst_ui_mcm_hui_anchor_position">
-		<text>Привязка: Позиция объекта</text>
+		<text>РџСЂРёРІСЏР·РєР°: РџРѕР·РёС†РёСЏ РѕР±СЉРµРєС‚Р°</text>
 	</string>
     <string id="ui_mcm_hui_anchor_position">
-		<text>Привязка: Позиция объекта</text>
+		<text>РџСЂРёРІСЏР·РєР°: РџРѕР·РёС†РёСЏ РѕР±СЉРµРєС‚Р°</text>
 	</string>
     <string id="ui_mcm_hui_head_y_offset">
-		<text>Смещение Y головы (смещение, м)</text>
+		<text>РЎРјРµС‰РµРЅРёРµ Y РіРѕР»РѕРІС‹ (СЃРјРµС‰РµРЅРёРµ, Рј)</text>
 	</string>
     <string id="ui_mcm_hui_head_y_offset_desc">
-		<text>Ручное смещение маркера вверх/вниз от головы (метры). Теперь работает напрямую и не подавляется зумом.</text>
+		<text>Р СѓС‡РЅРѕРµ СЃРјРµС‰РµРЅРёРµ РјР°СЂРєРµСЂР° РІРІРµСЂС…/РІРЅРёР· РѕС‚ РіРѕР»РѕРІС‹ (РјРµС‚СЂС‹). РўРµРїРµСЂСЊ СЂР°Р±РѕС‚Р°РµС‚ РЅР°РїСЂСЏРјСѓСЋ Рё РЅРµ РїРѕРґР°РІР»СЏРµС‚СЃСЏ Р·СѓРјРѕРј.</text>
 	</string>
     <string id="ui_mcm_hui_fov_comp_weight">
-		<text>Вес компенсации зума</text>
+		<text>Р’РµСЃ РєРѕРјРїРµРЅСЃР°С†РёРё Р·СѓРјР°</text>
 	</string>
     <string id="ui_mcm_hui_fov_comp_weight_desc">
-		<text>1.0 - полная компенсация, 0.0 - без компенсации, >1.0 - гипер-компенсация (маркер будет опускаться агрессивнее при зуме).</text>
+		<text>1.0 - РїРѕР»РЅР°СЏ РєРѕРјРїРµРЅСЃР°С†РёСЏ, 0.0 - Р±РµР· РєРѕРјРїРµРЅСЃР°С†РёРё, >1.0 - РіРёРїРµСЂ-РєРѕРјРїРµРЅСЃР°С†РёСЏ (РјР°СЂРєРµСЂ Р±СѓРґРµС‚ РѕРїСѓСЃРєР°С‚СЊСЃСЏ Р°РіСЂРµСЃСЃРёРІРЅРµРµ РїСЂРё Р·СѓРјРµ).</text>
 	</string>
     <string id="ui_mcm_hui_fov_factor_min">
-		<text>Мин. коэффициент FOV</text>
+		<text>РњРёРЅ. РєРѕСЌС„С„РёС†РёРµРЅС‚ FOV</text>
 	</string>
     <string id="ui_mcm_hui_fov_factor_min_desc">
-		<text>Минимальный коэффициент масштабирования FOV (0.1-1.0)</text>
+		<text>РњРёРЅРёРјР°Р»СЊРЅС‹Р№ РєРѕСЌС„С„РёС†РёРµРЅС‚ РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёСЏ FOV (0.1-1.0)</text>
 	</string>
     <string id="ui_mcm_hui_fov_factor_max">
-		<text>Макс. коэффициент FOV</text>
+		<text>РњР°РєСЃ. РєРѕСЌС„С„РёС†РёРµРЅС‚ FOV</text>
 	</string>
     <string id="ui_mcm_hui_fov_factor_max_desc">
-		<text>Максимальный коэффициент масштабирования FOV (1.0-5.0)</text>
+		<text>РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ РєРѕСЌС„С„РёС†РёРµРЅС‚ РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёСЏ FOV (1.0-5.0)</text>
 	</string>
     <string id="ui_mcm_hui_hp_bar_w">
-		<text>Ширина полоски HP</text>
+		<text>РЁРёСЂРёРЅР° РїРѕР»РѕСЃРєРё HP</text>
 	</string>
     <string id="ui_mcm_hui_hp_bar_w_desc">
-		<text>Базовая ширина полоски здоровья (пиксели).</text>
+		<text>Р‘Р°Р·РѕРІР°СЏ С€РёСЂРёРЅР° РїРѕР»РѕСЃРєРё Р·РґРѕСЂРѕРІСЊСЏ (РїРёРєСЃРµР»Рё).</text>
 	</string>
     <string id="ui_mcm_hui_hp_bar_min_w">
-		<text>Мин. ширина полоски HP</text>
+		<text>РњРёРЅ. С€РёСЂРёРЅР° РїРѕР»РѕСЃРєРё HP</text>
 	</string>
     <string id="ui_mcm_hui_hp_bar_min_w_desc">
-		<text>Минимальная ширина полоски HP при масштабировании по дистанции.</text>
+		<text>РњРёРЅРёРјР°Р»СЊРЅР°СЏ С€РёСЂРёРЅР° РїРѕР»РѕСЃРєРё HP РїСЂРё РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРё РїРѕ РґРёСЃС‚Р°РЅС†РёРё.</text>
 	</string>
     <string id="ui_mcm_hui_hp_bar_max_w">
-		<text>Макс. ширина полоски HP</text>
+		<text>РњР°РєСЃ. С€РёСЂРёРЅР° РїРѕР»РѕСЃРєРё HP</text>
 	</string>
     <string id="ui_mcm_hui_hp_bar_max_w_desc">
-		<text>Максимальная ширина полоски HP при масштабировании по дистанции.</text>
+		<text>РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ С€РёСЂРёРЅР° РїРѕР»РѕСЃРєРё HP РїСЂРё РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРё РїРѕ РґРёСЃС‚Р°РЅС†РёРё.</text>
 	</string>
     <string id="ui_mcm_hui_hp_bar_offset_x">
-		<text>Смещение X полоски HP (пикс)</text>
+		<text>РЎРјРµС‰РµРЅРёРµ X РїРѕР»РѕСЃРєРё HP (РїРёРєСЃ)</text>
 	</string>
     <string id="ui_mcm_hui_hp_bar_offset_x_desc">
-		<text>Двигать полоску HP влево/вправо (в пикселях маркера).</text>
+		<text>Р”РІРёРіР°С‚СЊ РїРѕР»РѕСЃРєСѓ HP РІР»РµРІРѕ/РІРїСЂР°РІРѕ (РІ РїРёРєСЃРµР»СЏС… РјР°СЂРєРµСЂР°).</text>
 	</string>
     <string id="ui_mcm_hui_hp_bar_offset_y">
-		<text>Смещение Y полоски HP (пикс)</text>
+		<text>РЎРјРµС‰РµРЅРёРµ Y РїРѕР»РѕСЃРєРё HP (РїРёРєСЃ)</text>
 	</string>
     <string id="ui_mcm_hui_hp_bar_offset_y_desc">
-		<text>Двигать полоску HP вверх/вниз (в пикселях маркера).</text>
+		<text>Р”РІРёРіР°С‚СЊ РїРѕР»РѕСЃРєСѓ HP РІРІРµСЂС…/РІРЅРёР· (РІ РїРёРєСЃРµР»СЏС… РјР°СЂРєРµСЂР°).</text>
+		</string>
+	<string id="ui_mcm_hui_hp_bar_symbolic">
+		<text>Symbolic HP bar</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbolic_desc">
+		<text>Replace the textured HP bar with a symbol bar (e.g. ||||||||).</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbol_style">
+		<text>Symbol style</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbol_style_desc">
+		<text>Which character is used to draw the symbolic HP bar.</text>
+	</string>
+	<string id="hui_hp_bar_symbol_style_lst_ui_mcm_hui_hp_bar_symbol_pipe">
+		<text>| (pipe)</text>
+	</string>
+	<string id="hui_hp_bar_symbol_style_lst_ui_mcm_hui_hp_bar_symbol_I">
+		<text>I (capital i)</text>
+	</string>
+	<string id="hui_hp_bar_symbol_style_lst_ui_mcm_hui_hp_bar_symbol_block">
+		<text># (block)</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbol_len">
+		<text>Symbol string length</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbol_len_desc">
+		<text>Length of the internal prebuilt string used for clipping (16-512).</text>
 	</string>
     <string id="ui_mcm_hui_hide_hp_full">
-		<text>Скрывать полоску HP при полном здоровье</text>
+		<text>РЎРєСЂС‹РІР°С‚СЊ РїРѕР»РѕСЃРєСѓ HP РїСЂРё РїРѕР»РЅРѕРј Р·РґРѕСЂРѕРІСЊРµ</text>
 	</string>
     <string id="ui_mcm_hui_hide_hp_full_desc">
-		<text>Скрывать полоску HP если здоровье на 100%</text>
+		<text>РЎРєСЂС‹РІР°С‚СЊ РїРѕР»РѕСЃРєСѓ HP РµСЃР»Рё Р·РґРѕСЂРѕРІСЊРµ РЅР° 100%</text>
 	</string>
     <string id="ui_mcm_hui_detect_enable">
-		<text>Включить задержку обнаружения</text>
+		<text>Р’РєР»СЋС‡РёС‚СЊ Р·Р°РґРµСЂР¶РєСѓ РѕР±РЅР°СЂСѓР¶РµРЅРёСЏ</text>
 	</string>
     <string id="ui_mcm_hui_detect_enable_desc">
-		<text>Включить задержанное обнаружение для дальних целей</text>
+		<text>Р’РєР»СЋС‡РёС‚СЊ Р·Р°РґРµСЂР¶Р°РЅРЅРѕРµ РѕР±РЅР°СЂСѓР¶РµРЅРёРµ РґР»СЏ РґР°Р»СЊРЅРёС… С†РµР»РµР№</text>
 	</string>
     <string id="ui_mcm_hui_detect_instant_dist">
-		<text>Дистанция мгновенного обнаружения (м)</text>
+		<text>Р”РёСЃС‚Р°РЅС†РёСЏ РјРіРЅРѕРІРµРЅРЅРѕРіРѕ РѕР±РЅР°СЂСѓР¶РµРЅРёСЏ (Рј)</text>
 	</string>
     <string id="ui_mcm_hui_detect_instant_dist_desc">
-		<text>Максимальная дистанция для мгновенного обнаружения цели (1-200м)</text>
+		<text>РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґРёСЃС‚Р°РЅС†РёСЏ РґР»СЏ РјРіРЅРѕРІРµРЅРЅРѕРіРѕ РѕР±РЅР°СЂСѓР¶РµРЅРёСЏ С†РµР»Рё (1-200Рј)</text>
 	</string>
     <string id="ui_mcm_hui_detect_delay_sec">
-		<text>Задержка обнаружения (сек)</text>
+		<text>Р—Р°РґРµСЂР¶РєР° РѕР±РЅР°СЂСѓР¶РµРЅРёСЏ (СЃРµРє)</text>
 	</string>
     <string id="ui_mcm_hui_detect_delay_sec_desc">
-		<text>Задержка перед показом полной информации для дальних целей (1-10с)</text>
+		<text>Р—Р°РґРµСЂР¶РєР° РїРµСЂРµРґ РїРѕРєР°Р·РѕРј РїРѕР»РЅРѕР№ РёРЅС„РѕСЂРјР°С†РёРё РґР»СЏ РґР°Р»СЊРЅРёС… С†РµР»РµР№ (1-10СЃ)</text>
 	</string>
     <string id="ui_mcm_hui_detecting">
-		<text>Обнаружение</text>
+		<text>РћР±РЅР°СЂСѓР¶РµРЅРёРµ</text>
 	</string>	
 </string_table>

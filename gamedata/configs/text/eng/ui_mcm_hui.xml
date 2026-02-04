@@ -239,6 +239,33 @@
 	<string id="ui_mcm_hui_hp_bar_offset_y_desc">
 		<text>Move HP bar up/down (in marker pixels).</text>
 	</string>
+	<string id="ui_mcm_hui_hp_bar_symbolic">
+		<text>Symbolic HP bar</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbolic_desc">
+		<text>Replace the textured HP bar with a symbol bar (e.g. ||||||||).</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbol_style">
+		<text>Symbol style</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbol_style_desc">
+		<text>Which character is used to draw the symbolic HP bar.</text>
+	</string>
+	<string id="hui_hp_bar_symbol_style_lst_ui_mcm_hui_hp_bar_symbol_pipe">
+		<text>| (pipe)</text>
+	</string>
+	<string id="hui_hp_bar_symbol_style_lst_ui_mcm_hui_hp_bar_symbol_I">
+		<text>I (capital i)</text>
+	</string>
+	<string id="hui_hp_bar_symbol_style_lst_ui_mcm_hui_hp_bar_symbol_block">
+		<text># (block)</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbol_len">
+		<text>Max symbols</text>
+	</string>
+	<string id="ui_mcm_hui_hp_bar_symbol_len_desc">
+		<text>How many symbols are shown at full HP (1-50).</text>
+	</string>
 	<string id="ui_mcm_hui_hide_hp_full">
 		<text>Hide HP bar when full</text>
 	</string>
