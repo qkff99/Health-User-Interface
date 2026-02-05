@@ -3,6 +3,7 @@ function on_mcm_load()
         id = "hui", sh = true, gr = {
             { id = "banner", type = "slide", text = "ui_mcm_hui_title", size = { 512, 50 }, spacing = 20 },
             {id = "desc_mcm", type = "desc", text = "H.U.I.", clr = {255, 175 ,175 ,0}},
+			{ id = "enable", type = "check", val = 1, def = true},
             { id = "range",  type =  "track", val = 2, min = 0, max = 500, step = 10, def = 300 },
 			{ id = "show_mode", type = "list", val = 2, def = 2, content = { { 1, "ui_mcm_hui_show_mode_enemy" }, { 2, "ui_mcm_hui_show_mode_any" } } },
 			{ id = "require_los", type = "check", val = 1, def = true},

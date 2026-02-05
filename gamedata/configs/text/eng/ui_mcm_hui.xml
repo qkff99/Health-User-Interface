@@ -8,6 +8,12 @@
     <string id="ui_mcm_menu_hui">
 		<text>H.U.I.</text>
 	</string>
+	<string id="ui_mcm_hui_enable">
+		<text>Enable addon</text>
+	</string>
+	<string id="ui_mcm_hui_enable_desc">
+		<text>Enables/disables H.U.I. completely</text>
+	</string>
     <string id="ui_mcm_hui_range">
 		<text>Max distance (m)</text>
 	</string>

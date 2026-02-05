@@ -8,6 +8,12 @@
     <string id="ui_mcm_menu_hui">
 		<text>H.U.I.</text>
 	</string>
+	<string id="ui_mcm_hui_enable">
+		<text>Включить мод</text>
+	</string>
+	<string id="ui_mcm_hui_enable_desc">
+		<text>Включает/выключает H.U.I. целиком</text>
+	</string>
     <string id="ui_mcm_hui_range">
 		<text>Максимальная дистанция (м)</text>
 	</string>
